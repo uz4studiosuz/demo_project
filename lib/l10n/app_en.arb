@@ -1,0 +1,10 @@
+{
+  "hello": "Hello!",
+  "secure": "Securely log in with your email and password.",
+  "signin": "Sign in",
+  "email": "Enter your mail",
+  "password": "Enter your Password",
+  "remember": "Remember me",
+  "forgot": "Forgot password?",
+  "select": "Select Language"
+}

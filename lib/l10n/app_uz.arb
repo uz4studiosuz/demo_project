@@ -1,0 +1,10 @@
+{
+  "hello": "Assalomu alaykum!",
+  "secure": "Email va parolingiz bilan xavfsiz tizimga kiring.",
+  "signin": "Kirish",
+  "email": "Emailni kiriting",
+  "password": "Parolni kiriting",
+  "remember": "Eslab qolish",
+  "forgot": "Parolni unutdingizmi?",
+  "select": "Tilni tanlang"
+}
