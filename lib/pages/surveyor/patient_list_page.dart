@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../../providers/app_provider.dart';
 import '../../models/patient.dart';
 import '../../utils/constants.dart';
+import '../../additional/map_border.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({super.key});
@@ -53,7 +54,11 @@ class _PatientListPageState extends State<PatientListPage> {
             const SizedBox(height: 8),
             _infoRow(Icons.location_on, 'Manzil:', patient.address),
             _infoRow(Icons.phone, 'Telefon:', patient.phone),
-            _infoRow(Icons.family_restroom, 'A\'zolar soni:', patient.familyMembersCount.toString()),
+            _infoRow(
+              Icons.family_restroom,
+              'A\'zolar soni:',
+              patient.familyMembersCount.toString(),
+            ),
             if (patient.isHighRisk)
               Container(
                 margin: const EdgeInsets.only(top: 12),
@@ -67,7 +72,13 @@ class _PatientListPageState extends State<PatientListPage> {
                   children: [
                     Icon(Icons.error_outline, color: Colors.red, size: 20),
                     SizedBox(width: 8),
-                    Text('Qizil hudud xavfi', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Qizil hudud xavfi',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -104,7 +115,10 @@ class _PatientListPageState extends State<PatientListPage> {
               text: TextSpan(
                 style: const TextStyle(color: Colors.black, fontSize: 14),
                 children: [
-                  TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(
+                    text: '$label ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   TextSpan(text: value),
                 ],
               ),
@@ -153,7 +167,7 @@ class _PatientListPageState extends State<PatientListPage> {
     // Agar bemorlar bo'lsa o'rtacha koordinatani olamiz, yo'qsa default Farg'ona
     double centerLat = 40.3864;
     double centerLng = 71.7825;
-    
+
     if (patients.isNotEmpty) {
       double avgLat = 0;
       double avgLng = 0;
@@ -172,23 +186,25 @@ class _PatientListPageState extends State<PatientListPage> {
         initialZoom: 13.0,
         minZoom: 5.0,
         maxZoom: 18.0,
-        onPositionChanged: (position, hasGesture) => _constrainMap(position),
+        onPositionChanged: (position, hasGesture) => constrainMap(position, _mapController),
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
+          urlTemplate:
+              'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
           userAgentPackageName: 'com.example.demoproject',
           maxZoom: 20,
         ),
-        PolylineLayer(
-          polylines: [
-            Polyline(
-              points: _ferganaBorder,
-              color: Colors.redAccent,
-              strokeWidth: 3,
-            ),
-          ],
-        ),
+        if (kShowMapBorder)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: kFerganaBorder,
+                color: Colors.redAccent,
+                strokeWidth: 3,
+              ),
+            ],
+          ),
         MarkerClusterLayerWidget(
           options: MarkerClusterLayerOptions(
             maxClusterRadius: 45,
@@ -209,7 +225,9 @@ class _PatientListPageState extends State<PatientListPage> {
                     children: [
                       Icon(
                         Icons.location_pin,
-                        color: patient.isHighRisk ? Colors.red : AppColors.primary,
+                        color: patient.isHighRisk
+                            ? Colors.red
+                            : AppColors.primary,
                         size: 45,
                       ),
                       Positioned(
@@ -220,7 +238,9 @@ class _PatientListPageState extends State<PatientListPage> {
                           child: Icon(
                             Icons.family_restroom,
                             size: 12,
-                            color: patient.isHighRisk ? Colors.red : AppColors.primary,
+                            color: patient.isHighRisk
+                                ? Colors.red
+                                : AppColors.primary,
                           ),
                         ),
                       ),
@@ -258,53 +278,6 @@ class _PatientListPageState extends State<PatientListPage> {
     );
   }
 
-  // Farg'ona viloyati aniq chegaralari (Google Maps asosida o'lchangan)
-  final List<LatLng> _ferganaBorder = const [
-    LatLng(40.612, 70.435), // Beshariq West
-    LatLng(40.678, 70.618), // Beshariq North
-    LatLng(40.732, 70.825), // Dangara North
-    LatLng(40.781, 71.014), // Buvayda North
-    LatLng(40.854, 71.218), // Yazyavan North-West
-    LatLng(40.902, 71.450), // Yazyavan North
-    LatLng(40.835, 71.720), // Quva North-West
-    LatLng(40.755, 71.950), // Quva North
-    LatLng(40.686, 72.185), // Quva East
-    LatLng(40.551, 72.368), // Quvasoy East
-    LatLng(40.415, 72.215), // Quvasoy South
-    LatLng(40.292, 71.954), // Farg'ona South-East
-    LatLng(40.150, 71.850), // Vadil East
-    LatLng(39.954, 71.848), // Shoximardon East
-    LatLng(39.851, 71.745), // Shoximardon South
-    LatLng(39.945, 71.650), // Shoximardon West
-    LatLng(40.114, 71.642), // Vadil West
-    LatLng(40.155, 71.450), // Rishton South-East
-    LatLng(40.245, 71.285), // Rishton South
-    LatLng(40.285, 71.120), // Bagdod South
-    LatLng(40.315, 70.950), // Uchkuprik South
-    LatLng(40.355, 70.785), // Yaypan South
-    LatLng(40.415, 70.655), // Yaypan West
-    LatLng(40.455, 70.515), // Beshariq South
-    LatLng(40.525, 70.420), // Beshariq South-West
-    LatLng(40.612, 70.435), // Close loop
-  ];
-
-  void _constrainMap(MapCamera camera) {
-    if (_ferganaBorder.isEmpty) return;
-    
-    // Chegara qutisini hisoblaymiz (Bounding Box)
-    final bounds = LatLngBounds.fromPoints(_ferganaBorder);
-    
-    if (!bounds.contains(camera.center)) {
-      // Agar markaz chegaradan chiqsa, Farg'onaga qaytarish
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          _mapController.move(const LatLng(40.3864, 71.7825), _mapController.camera.zoom);
-        } catch (e) {
-          debugPrint("Map move error: $e");
-        }
-      });
-    }
-  }
 
   Widget _buildListView(List<Patient> patients) {
     return ListView.builder(
@@ -313,22 +286,43 @@ class _PatientListPageState extends State<PatientListPage> {
         final patient = patients[index];
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
           child: ListTile(
             contentPadding: const EdgeInsets.all(12),
             leading: CircleAvatar(
-              backgroundColor: patient.isHighRisk ? Colors.red.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.1),
-              child: Icon(Icons.family_restroom, color: patient.isHighRisk ? Colors.red : AppColors.primary),
+              backgroundColor: patient.isHighRisk
+                  ? Colors.red.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+              child: Icon(
+                Icons.family_restroom,
+                color: patient.isHighRisk ? Colors.red : AppColors.primary,
+              ),
             ),
-            title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              patient.fullName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                Text(patient.address, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  patient.address,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (patient.isHighRisk)
-                  const Text('Qizil hudud', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Qizil hudud',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
               ],
             ),
             trailing: Row(
@@ -356,16 +350,27 @@ class _PatientListPageState extends State<PatientListPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('O\'chirish'),
-        content: const Text('Haqiqatdan ham ushbu oila ma\'lumotlarini o\'chirmoqchimisiz?'),
+        content: const Text(
+          'Haqiqatdan ham ushbu oila ma\'lumotlarini o\'chirmoqchimisiz?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Yo\'q')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ha')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Yo\'q'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ha'),
+          ),
         ],
       ),
     );
     if (confirm == true) {
       if (mounted) {
-        Provider.of<AppProvider>(context, listen: false).deletePatient(patient.id);
+        Provider.of<AppProvider>(
+          context,
+          listen: false,
+        ).deletePatient(patient.id);
       }
     }
   }

@@ -9,6 +9,7 @@ import '../../utils/constants.dart';
 import '../login.dart';
 import 'patient_list_page.dart';
 import 'full_screen_map_picker.dart';
+import '../../additional/map_border.dart';
 
 class SurveyorDashboard extends StatefulWidget {
   const SurveyorDashboard({super.key});
@@ -28,7 +29,10 @@ class _SurveyorDashboardState extends State<SurveyorDashboard> {
   bool _isLoadingLocation = false;
 
   final MapController _mapController = MapController();
-  LatLng _centerPosition = const LatLng(40.3864, 71.7825); // Farg'ona shahri markazi
+  LatLng _centerPosition = const LatLng(
+    40.3864,
+    71.7825,
+  ); // Farg'ona shahri markazi
 
   @override
   void initState() {
@@ -312,13 +316,14 @@ class _SurveyorDashboardState extends State<SurveyorDashboard> {
                                   minZoom: 5,
                                   maxZoom: 18,
                                   onPositionChanged: (position, hasGesture) {
-                                    _constrainMap(position);
+                                    constrainMap(position, _mapController);
                                     if (hasGesture) {
                                       _centerPosition = position.center;
                                     }
                                   },
                                   interactionOptions: const InteractionOptions(
-                                    flags: InteractiveFlag.all &
+                                    flags:
+                                        InteractiveFlag.all &
                                         ~InteractiveFlag.rotate,
                                   ),
                                 ),
@@ -330,15 +335,16 @@ class _SurveyorDashboardState extends State<SurveyorDashboard> {
                                         'com.example.demoproject',
                                     maxZoom: 20,
                                   ),
-                                  PolylineLayer(
-                                    polylines: [
-                                      Polyline(
-                                        points: _ferganaBorder,
-                                        color: Colors.redAccent,
-                                        strokeWidth: 3,
-                                      ),
-                                    ],
-                                  ),
+                                  if (kShowMapBorder)
+                                    PolylineLayer(
+                                      polylines: [
+                                        Polyline(
+                                          points: kFerganaBorder,
+                                          color: Colors.redAccent,
+                                          strokeWidth: 3,
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                               const Center(
@@ -389,50 +395,168 @@ class _SurveyorDashboardState extends State<SurveyorDashboard> {
     );
   }
 
-  // Farg'ona viloyati aniq chegaralari (Google Maps asosida o'lchangan)
-  final List<LatLng> _ferganaBorder = const [
-    LatLng(40.612, 70.435), // Beshariq West
-    LatLng(40.678, 70.618), // Beshariq North
-    LatLng(40.732, 70.825), // Dangara North
-    LatLng(40.781, 71.014), // Buvayda North
-    LatLng(40.854, 71.218), // Yazyavan North-West
-    LatLng(40.902, 71.450), // Yazyavan North
-    LatLng(40.835, 71.720), // Quva North-West
-    LatLng(40.755, 71.950), // Quva North
-    LatLng(40.686, 72.185), // Quva East
-    LatLng(40.551, 72.368), // Quvasoy East
-    LatLng(40.415, 72.215), // Quvasoy South
-    LatLng(40.292, 71.954), // Farg'ona South-East
-    LatLng(40.150, 71.850), // Vadil East
-    LatLng(39.954, 71.848), // Shoximardon East
-    LatLng(39.851, 71.745), // Shoximardon South
-    LatLng(39.945, 71.650), // Shoximardon West
-    LatLng(40.114, 71.642), // Vadil West
-    LatLng(40.155, 71.450), // Rishton South-East
-    LatLng(40.245, 71.285), // Rishton South
-    LatLng(40.285, 71.120), // Bagdod South
-    LatLng(40.315, 70.950), // Uchkuprik South
-    LatLng(40.355, 70.785), // Yaypan South
-    LatLng(40.415, 70.655), // Yaypan West
-    LatLng(40.455, 70.515), // Beshariq South
-    LatLng(40.525, 70.420), // Beshariq South-West
-    LatLng(40.612, 70.435), // Close loop
-  ];
+  // Farg'ona viloyati aniq chegaralari (OSM asosida o'lchangan)
+  //   final List<LatLng> _ferganaBorder = const [
+  //     LatLng(40.4551648, 70.3281721),
+  //     LatLng(40.380107, 70.403696),
+  //     LatLng(40.3597413, 70.4587825),
+  //     LatLng(40.3478821, 70.5625151),
+  //     LatLng(40.3059275, 70.5630025),
+  //     LatLng(40.2757337, 70.5750552),
+  //     LatLng(40.258251, 70.5812361),
+  //     LatLng(40.2459105, 70.5957434),
+  //     LatLng(40.184815, 70.691624),
+  //     LatLng(40.2021394, 70.793518),
+  //     LatLng(40.220391, 70.8611865),
+  //     LatLng(40.2584562, 70.9745777),
+  //     LatLng(40.2883516, 70.9657635),
+  //     LatLng(40.2947689, 71.0143816),
+  //     LatLng(40.3050707, 71.0868092),
+  //     LatLng(40.3376154, 71.1886214),
+  //     LatLng(40.3258322, 71.2457714),
+  //     LatLng(40.3233338, 71.2480653),
+  //     LatLng(40.3339771, 71.2618738),
+  //     LatLng(40.3414502, 71.2827626),
+  //     LatLng(40.317913, 71.2969499),
+  //     LatLng(40.317971, 71.3252637),
+  //     LatLng(40.3197085, 71.3496042),
+  //     LatLng(40.3183036, 71.3698978),
+  //     LatLng(40.3063252, 71.3715955),
+  //     LatLng(40.3043087, 71.3981562),
+  //     LatLng(40.278593, 71.4547506),
+  //     LatLng(40.2782367, 71.4862213),
+  //     LatLng(40.2793037, 71.4933766),
+  //     LatLng(40.2767842, 71.5020901),
+  //     LatLng(40.2707071, 71.5100396),
+  //     LatLng(40.2635901, 71.512613),
+  //     LatLng(40.2484643, 71.512679),
+  //     LatLng(40.2261464, 71.5204514),
+  //     LatLng(40.2195084, 71.5526181),
+  //     LatLng(40.2160803, 71.5745691),
+  //     LatLng(40.2187459, 71.5839547),
+  //     LatLng(40.2107824, 71.5980632),
+  //     LatLng(40.2076068, 71.6136763),
+  //     LatLng(40.2164604, 71.6156214),
+  //     LatLng(40.2187242, 71.6272972),
+  //     LatLng(40.2361721, 71.6214354),
+  //     LatLng(40.2518418, 71.618625),
+  //     LatLng(40.2556499, 71.6181719),
+  //     LatLng(40.2668087, 71.6201316),
+  //     LatLng(40.2679712, 71.6435958),
+  //     LatLng(40.2636551, 71.6808915),
+  //     LatLng(40.2501736, 71.6887908),
+  //     LatLng(40.2333599, 71.700084),
+  //     LatLng(40.2187135, 71.6982271),
+  //     LatLng(40.2081417, 71.7040147),
+  //     LatLng(40.2069798, 71.6982837),
+  //     LatLng(40.1976831, 71.6955623),
+  //     LatLng(40.1915296, 71.7012155),
+  //     LatLng(40.1957219, 71.6869947),
+  //     LatLng(40.1959124, 71.6771076),
+  //     LatLng(40.1891983, 71.6845244),
+  //     LatLng(40.1842784, 71.6923555),
+  //     LatLng(40.1775065, 71.7090533),
+  //     LatLng(40.1511682, 71.7236231),
+  //     LatLng(40.1536735, 71.732024),
+  //     LatLng(40.1671625, 71.7451247),
+  //     LatLng(40.1778391, 71.7552422),
+  //     LatLng(40.2072643, 71.8042644),
+  //     LatLng(40.2044014, 71.8157475),
+  //     LatLng(40.2065715, 71.8321975),
+  //     LatLng(40.2521948, 71.8391874),
+  //     LatLng(40.2574466, 71.8595968),
+  //     LatLng(40.2624898, 71.8787564),
+  //     LatLng(40.2604052, 71.8910071),
+  //     LatLng(40.2570574, 71.9039825),
+  //     LatLng(40.2514669, 71.9268647),
+  //     LatLng(40.2401585, 71.9354609),
+  //     LatLng(40.2381175, 71.9465441),
+  //     LatLng(40.2457795, 71.9623418),
+  //     LatLng(40.2565838, 71.9785256),
+  //     LatLng(40.2687308, 72.0171613),
+  //     LatLng(40.2746719, 72.037558),
+  //     LatLng(40.2787712, 72.0520993),
+  //     LatLng(40.2911133, 72.0351882),
+  //     LatLng(40.2918194, 72.0294206),
+  //     LatLng(40.293267, 72.021881),
+  //     LatLng(40.2950125, 72.0122143),
+  //     LatLng(40.2969759, 72.0041355),
+  //     LatLng(40.29814, 71.9960145),
+  //     LatLng(40.300947, 71.9895261),
+  //     LatLng(40.3021703, 71.9838037),
+  //     LatLng(40.3108299, 71.9723077),
+  //     LatLng(40.320443, 71.9654099),
+  //     LatLng(40.3255474, 71.9721653),
+  //     LatLng(40.3543236, 72.0194648),
+  //     LatLng(40.3901716, 72.0632979),
+  //     LatLng(40.4103467, 72.0929647),
+  //     LatLng(40.4179204, 72.1017923),
+  //     LatLng(40.429076, 72.1078215),
+  //     LatLng(40.4419383, 72.1038029),
+  //     LatLng(40.4574867, 72.1213632),
+  //     LatLng(40.4924813, 72.1764959),
+  //     LatLng(40.5390354, 72.2345647),
+  //     LatLng(40.5567245, 72.211868),
+  //     LatLng(40.5648637, 72.1645878),
+  //     LatLng(40.5958695, 72.1084642),
+  //     LatLng(40.6162491, 72.0726138),
+  //     LatLng(40.6134312, 72.0638323),
+  //     LatLng(40.6121118, 72.0607531),
+  //     LatLng(40.6117779, 72.0589399),
+  //     LatLng(40.6115437, 72.0571187),
+  //     LatLng(40.611843, 72.0537579),
+  //     LatLng(40.6121729, 72.050668),
+  //     LatLng(40.612405, 72.0466608),
+  //     LatLng(40.6127919, 72.0420581),
+  //     LatLng(40.6130362, 72.0386463),
+  //     LatLng(40.6135615, 72.0299989),
+  //     LatLng(40.6139443, 72.0246506),
+  //     LatLng(40.6146549, 72.0151475),
+  //     LatLng(40.61343, 71.9880422),
+  //     LatLng(40.6211191, 71.9743216),
+  //     LatLng(40.6218032, 71.9602561),
+  //     LatLng(40.6226297, 71.938675),
+  //     LatLng(40.6453917, 71.8586991),
+  //     LatLng(40.668927, 71.8269848),
+  //     LatLng(40.7116913, 71.7415805),
+  //     LatLng(40.7281055, 71.6740317),
+  //     LatLng(40.7005646, 71.631655),
+  //     LatLng(40.6504944, 71.5801672),
+  //     LatLng(40.7284892, 71.4813107),
+  //     LatLng(40.6878307, 71.351324),
+  //     LatLng(40.6824598, 71.1614969),
+  //     LatLng(40.7495602, 71.0707067),
+  //     LatLng(40.739921, 70.9738993),
+  //     LatLng(40.7541161, 70.9448823),
+  //     LatLng(40.7534986, 70.9238068),
+  //     LatLng(40.7408293, 70.8951371),
+  //     LatLng(40.7335534, 70.8389533),
+  //     LatLng(40.7175278, 70.7783572),
+  //     LatLng(40.6838515, 70.7472528),
+  //     LatLng(40.6549488, 70.7282424),
+  //     LatLng(40.6390859, 70.6692633),
+  //     LatLng(40.5974604, 70.616801),
+  //     LatLng(40.5543623, 70.5532202),
+  //     LatLng(40.5140484, 70.4936537),
+  //     LatLng(40.4815448, 70.3995832),
+  //     LatLng(40.4551648, 70.3281721),
+  //   ];
 
-  void _constrainMap(MapCamera camera) {
-    if (_ferganaBorder.isEmpty) return;
-    
-    final bounds = LatLngBounds.fromPoints(_ferganaBorder);
-    
-    if (!bounds.contains(camera.center)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          _mapController.move(
-              const LatLng(40.3864, 71.7825), _mapController.camera.zoom);
-        } catch (e) {
-          debugPrint("Move error: $e");
-        }
-      });
-    }
-  }
+  //   void _constrainMap(MapCamera camera) {
+  //     if (_ferganaBorder.isEmpty) return;
+
+  //     final bounds = LatLngBounds.fromPoints(_ferganaBorder);
+
+  //     if (!bounds.contains(camera.center)) {
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         try {
+  //           _mapController.move(
+  //               const LatLng(40.3864, 71.7825), _mapController.camera.zoom);
+  //         } catch (e) {
+  //           debugPrint("Move error: $e");
+  //         }
+  //       });
+  //     }
+  //   }
+  //
 }
