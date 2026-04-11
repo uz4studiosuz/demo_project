@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../additional/map_border.dart';
+import '../../theme/colors.dart';
 
 class FullScreenMapPicker extends StatefulWidget {
   final LatLng initialPosition;
@@ -67,9 +68,10 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Joylashuvni tanlang'),
+        backgroundColor: AppColors.surface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.check),
+            icon: const Icon(Icons.check, color: AppColors.primary),
             onPressed: () {
               Navigator.pop(context, _currentPosition);
             },
@@ -91,6 +93,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                   _currentPosition = position.center;
                 }
               },
+              interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
             ),
             children: [
               TileLayer(
@@ -104,7 +107,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                   polylines: [
                     Polyline(
                       points: kFerganaBorder,
-                      color: Colors.redAccent,
+                      color: Colors.redAccent.withValues(alpha: 0.5),
                       strokeWidth: 3,
                     ),
                   ],
@@ -112,38 +115,43 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             ],
           ),
           const Center(
-            child: Icon(Icons.location_pin, size: 50, color: Colors.pink),
+            child: Icon(Icons.location_pin, size: 50, color: AppColors.danger),
           ),
           Positioned(
             right: 16,
             bottom: 100,
             child: FloatingActionButton(
-              heroTag: 'my_location_btn',
+              heroTag: 'my_location_btn_full',
               onPressed: _isLoading ? null : _getCurrentLocation,
+              backgroundColor: Colors.white,
               child: _isLoading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.my_location),
+                  : const Icon(Icons.my_location, color: AppColors.primary),
             ),
           ),
           Positioned(
-            bottom: 20,
+            bottom: 30,
             left: 20,
             right: 20,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(55),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 8,
+                shadowColor: AppColors.primary.withValues(alpha: 0.3),
               ),
               onPressed: () {
                 Navigator.pop(context, _currentPosition);
               },
-              child: const Text('Joylashuvni tasdiqlash'),
+              child: const Text('Joylashuvni tasdiqlash', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],

@@ -1,13 +1,12 @@
-import 'package:demoproject/additional/painters.dart';
-import 'package:demoproject/l10n/app_localizations.dart';
-import 'package:demoproject/pages/home.dart';
+import 'package:beemor/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:provider/provider.dart';
-import '../utils/constants.dart';
+import '../theme/colors.dart';
 import '../utils/locale_provider.dart';
 import '../models/user_role.dart';
 import '../providers/app_provider.dart';
+import '../widgets/liquid_background.dart';
 import 'surveyor/surveyor_dashboard.dart';
 import 'driver/driver_dashboard.dart';
 
@@ -107,31 +106,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Liquid Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF004CC5),
-                    Color(0xFF4364F7),
-                    Color(0xFF6FB1FC),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Abstract Waves (Liquid Glass feel)
-          Positioned.fill(
-            child: CustomPaint(
-              painter: LiquidPainter(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
+          const LiquidBackground(),
 
           // Search Language Button
           Positioned(
@@ -158,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.15),
+                backgroundColor: AppColors.glassBackground,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -171,20 +146,23 @@ class _LoginPageState extends State<LoginPage> {
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 200, 24, 0),
+            padding: const EdgeInsets.fromLTRB(24, 150, 24, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   l10n.hello,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  style: const TextStyle(
+                    fontSize: 32,
                     fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   l10n.secure,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.9),
                     height: 1.5,
                     letterSpacing: 0.2,
@@ -221,11 +199,12 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Text(
                       l10n.signin,
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: AppColors.textMain,
+                      ),
                     ),
                     const SizedBox(height: 32),
 
@@ -233,24 +212,24 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: _emailController,
                       style: const TextStyle(fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Foydalanuvchi nomi (user1/user2)',
-                        prefixIcon: const Padding(
+                      decoration: const InputDecoration(
+                        hintText: 'Foydalanuvchi nomi',
+                        prefixIcon: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Icon(TablerIcons.user, size: 22),
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
- 
+
                     // Password Field
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
                       style: const TextStyle(fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Parol (123)',
-                        prefixIcon: const Padding(
+                      decoration: const InputDecoration(
+                        hintText: 'Parol',
+                        prefixIcon: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Icon(TablerIcons.lock_password, size: 22),
                         ),
@@ -274,8 +253,11 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             Text(
                               l10n.remember,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -330,12 +312,14 @@ class _LoginPageState extends State<LoginPage> {
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text(
-                                            'Login xato. user1 yoki user2 so\'zini ishlating.'),
+                                        content: Text('Login yoki parol xato.'),
                                       ),
                                     );
                                   }
                                 },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 55),
+                          ),
                           child: provider.isLoading
                               ? const SizedBox(
                                   width: 24,

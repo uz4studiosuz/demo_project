@@ -1,67 +1,196 @@
-import '../models/patient.dart';
+import '../models/household_model.dart';
+import '../models/resident_model.dart';
+// import 'dart:convert';
+// import 'package:http/http.dart' as http; // TODO: REAL_API_INTEGRATION - http yoki dio paketlari orqali
 
 class ApiService {
-  final List<Patient> _mockPatients = [
-    Patient(
-      id: '1',
-      fullName: 'Sodikov Alisher',
-      phone: '+998901234567',
-      address: 'Farg\'ona shahri, Mustang ko\'chasi, 45-uy',
-      familyMembersCount: 4,
-      isHighRisk: true,
-      lat: 40.3860,
-      lng: 71.7825,
+  // TODO: REAL_API_INTEGRATION - Haqiqiy backend API manzili
+  // static const String baseUrl = "http://localhost:3000/api/v1";
+
+  // MOCK DATA
+  final List<HouseholdModel> _mockHouseholds = [
+    HouseholdModel(
+      id: 1,
+      regionId: 1,
+      districtId: 1,
+      createdByAgentId: 1,
+      officialAddress: "Farg'ona shahri, Mustang ko'chasi, 45-uy",
+      latitude: 40.3860,
+      longitude: 71.7825,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      residents: [
+        ResidentModel(
+          id: 1,
+          householdId: 1,
+          firstName: 'Alisher',
+          lastName: 'Sodikov',
+          phonePrimary: '+998901234567',
+          isHighRiskMock: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        ResidentModel(
+          id: 2,
+          householdId: 1,
+          firstName: 'Nargiza',
+          lastName: 'Sodikova',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        )
+      ],
     ),
-    Patient(
-      id: '2',
-      fullName: 'Valiyeva Nargiza',
-      phone: '+998939876543',
-      address: 'Marg\'ilon shahri, B.Marg\'iloniy ko\'chasi, 12-uy',
-      familyMembersCount: 2,
-      isHighRisk: false,
-      lat: 40.4515,
-      lng: 71.7310,
-    ),
-    Patient(
-      id: '3',
-      fullName: 'Toshmatov Botir',
-      phone: '+998971112233',
-      address: 'Qo\'qon shahri, Turkiston ko\'chasi, 5-uy',
-      familyMembersCount: 6,
-      isHighRisk: true,
-      lat: 40.5283,
-      lng: 70.9364,
+    HouseholdModel(
+      id: 2,
+      regionId: 1,
+      districtId: 2,
+      createdByAgentId: 1,
+      officialAddress: "Marg'ilon shahri, B.Marg'iloniy ko'chasi, 12-uy",
+      latitude: 40.4515,
+      longitude: 71.7310,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      residents: [
+        ResidentModel(
+          id: 3,
+          householdId: 2,
+          firstName: 'Dilshod',
+          lastName: 'Toshmatov',
+          phonePrimary: '+998939876543',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        )
+      ],
     ),
   ];
 
-  Future<List<Patient>> getPatients() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
-    return [..._mockPatients];
-  }
-
-  Future<bool> savePatient(Patient patient) async {
-    await Future.delayed(const Duration(seconds: 1));
-    _mockPatients.add(patient);
-    print("ApiService: Bemor saqlandi: ${patient.toMap()}");
-    return true;
-  }
-
-  Future<bool> updatePatient(Patient updatedPatient) async {
-    await Future.delayed(const Duration(seconds: 1));
-    int index = _mockPatients.indexWhere((p) => p.id == updatedPatient.id);
-    if (index != -1) {
-      _mockPatients[index] = updatedPatient;
-      print("ApiService: Bemor yangilandi: ${updatedPatient.id}");
-      return true;
+  /// Hamma householdlarni olib kelish
+  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` va uning `@Get()` endpointi bilan ulanadi
+  Future<List<HouseholdModel>> getHouseholds() async {
+    /* 
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/households'),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return data.map((e) => HouseholdModel.fromJson(e)).toList();
+      }
+    } catch(e) {
+      print(e);
     }
-    return false;
+    */
+    await Future.delayed(const Duration(seconds: 1));
+    return [..._mockHouseholds];
   }
 
-  Future<bool> deletePatient(String id) async {
+  /// Yangi xonadon (Household) yaratish
+  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` `@Post()` bilan ulanadi
+  Future<HouseholdModel?> createHousehold(HouseholdModel household) async {
+    /*
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/households'),
+        body: jsonEncode(household.toJson()),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 201) {
+        return HouseholdModel.fromJson(jsonDecode(response.body));
+      }
+    } catch(e) {
+      // print("Save error: $e");
+    }
+    return null;
+    */
     await Future.delayed(const Duration(seconds: 1));
-    _mockPatients.removeWhere((p) => p.id == id);
-    print("ApiService: Bemor o'chirildi: $id");
+    final newId = _mockHouseholds.isEmpty ? 1 : _mockHouseholds.last.id + 1;
+    final newHh = HouseholdModel(
+      id: newId,
+      regionId: household.regionId,
+      districtId: household.districtId,
+      createdByAgentId: household.createdByAgentId,
+      officialAddress: household.officialAddress,
+      latitude: household.latitude,
+      longitude: household.longitude,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      residents: [],
+    );
+    _mockHouseholds.add(newHh);
+    // print("ApiService (Mock): Xonadon saqlandi: ${newHh.id}");
+    return newHh;
+  }
+
+  /// Xonadonga yangi yashovchi (Resident) qo'shish
+  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `ResidentController` `@Post()` bilan ulanadi
+  Future<ResidentModel?> createResident(ResidentModel resident) async {
+    /*
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/residents'),
+        body: jsonEncode(resident.toJson()),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 201) {
+        return ResidentModel.fromJson(jsonDecode(response.body));
+      }
+      // print("Save error: $e");
+    }
+    return null;
+    */
+    await Future.delayed(const Duration(seconds: 1));
+    final hhIndex = _mockHouseholds.indexWhere((h) => h.id == resident.householdId);
+    if (hhIndex != -1) {
+      final hh = _mockHouseholds[hhIndex];
+      final newId = hh.residents.isEmpty ? (hh.id * 100) : hh.residents.last.id + 1; // mock ID gen
+      
+      final newRes = ResidentModel(
+        id: newId,
+        householdId: hh.id,
+        firstName: resident.firstName,
+        lastName: resident.lastName,
+        phonePrimary: resident.phonePrimary,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      hh.residents.add(newRes);
+      // print("ApiService (Mock): Yashovchi saqlandi: ${newRes.id}");
+      return newRes;
+    }
+    return null;
+  }
+
+  /// Xonadonni o'chirish
+  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` `@Delete(':id')` bilan ulanadi
+  Future<bool> deleteHousehold(int id) async {
+    /*
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/households/$id'),
+        headers: await _getHeaders(),
+      );
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch(e) {
+      return false;
+    }
+    */
+    await Future.delayed(const Duration(seconds: 1));
+    _mockHouseholds.removeWhere((h) => h.id == id);
+    // print("ApiService (Mock): Xonadon o'chirildi: $id");
     return true;
   }
+
+  // TODO: REAL_API_INTEGRATION - Interceptor logikasi (Token qo'shish uchun xizmat qiladi)
+  /*
+  Future<Map<String, String>> _getHeaders() async {
+    // Shoxobcha: auth_service dan accessToken ni olib kelib headerga uramiz
+    // final token = await authService.getToken(); 
+    return {
+      'Content-Type': 'application/json',
+      // 'Authorization': 'Bearer $token',
+    };
+  }
+  */
 }

@@ -1,15 +1,19 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
-import '../../models/patient.dart';
-import '../../utils/constants.dart';
+import '../../models/household_model.dart';
+import '../../theme/colors.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/household_card.dart';
 import '../login.dart';
+import 'add_family_page.dart';
 import 'patient_list_page.dart';
-import 'full_screen_map_picker.dart';
 import '../../additional/map_border.dart';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class SurveyorDashboard extends StatefulWidget {
   const SurveyorDashboard({super.key});
@@ -19,544 +23,683 @@ class SurveyorDashboard extends StatefulWidget {
 }
 
 class _SurveyorDashboardState extends State<SurveyorDashboard> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _familyCountController = TextEditingController();
-  final List<TextEditingController> _memberNamesControllers = [];
-  bool _isHighRisk = false;
-  bool _isLoadingLocation = false;
+  int _currentIndex = 0;
 
-  final MapController _mapController = MapController();
-  LatLng _centerPosition = const LatLng(
-    40.3864,
-    71.7825,
-  ); // Farg'ona shahri markazi
+  final List<Widget> _pages = [
+    const DashboardHome(),
+    const PatientListPage(isEmbedded: true),
+    const HouseholdsMapPage(),
+    const ProfilePage(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _familyCountController.addListener(_onFamilyCountChanged);
-  }
-
-  void _onFamilyCountChanged() {
-    final count = int.tryParse(_familyCountController.text) ?? 0;
-    if (count > 20) return; // Cheklov
-
-    setState(() {
-      if (_memberNamesControllers.length < count) {
-        for (int i = _memberNamesControllers.length; i < count; i++) {
-          _memberNamesControllers.add(TextEditingController());
-        }
-      } else if (_memberNamesControllers.length > count) {
-        for (int i = _memberNamesControllers.length - 1; i >= count; i--) {
-          _memberNamesControllers[i].dispose();
-          _memberNamesControllers.removeAt(i);
-        }
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
     });
-  }
-
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')),
-          );
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _centerPosition = LatLng(position.latitude, position.longitude);
-        _mapController.move(_centerPosition, 16);
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    _familyCountController.dispose();
-    for (var c in _memberNamesControllers) {
-      c.dispose();
-    }
-    _mapController.dispose();
-    super.dispose();
-  }
-
-  void _openFullScreenMap() async {
-    final LatLng? result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            FullScreenMapPicker(initialPosition: _centerPosition),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _centerPosition = result;
-        _mapController.move(_centerPosition, 16);
-      });
-    }
-  }
-
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      final provider = Provider.of<AppProvider>(context, listen: false);
-
-      final patient = Patient(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        fullName: _nameController.text,
-        phone: _phoneController.text,
-        address: _addressController.text,
-        familyMembersCount: int.tryParse(_familyCountController.text) ?? 1,
-        isHighRisk: _isHighRisk,
-        lat: _centerPosition.latitude,
-        lng: _centerPosition.longitude,
-      );
-
-      bool success = await provider.savePatient(patient);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ma\'lumot muvaffaqiyatli saqlandi!')),
-        );
-        // Clear form
-        _nameController.clear();
-        _phoneController.clear();
-        _addressController.clear();
-        _familyCountController.clear();
-        setState(() {
-          _isHighRisk = false;
-        });
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<AppProvider>(context);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hatlovchi Ekroni'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list_alt),
-            tooltip: 'Ro\'yxatni boshqarish',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PatientListPage(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              provider.logout();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-              );
-            },
+      backgroundColor: AppColors.background,
+      extendBody: true,
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      margin: const EdgeInsets.only(left: 24, right: 24, bottom: 30),
+      height: 70,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(35),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(35),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Oila Qo\'shish',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                _buildNavItem(
+                  0,
+                  CupertinoIcons.square_grid_2x2,
+                  CupertinoIcons.square_grid_2x2_fill,
+                ),
+                _buildNavItem(
+                  1,
+                  CupertinoIcons.list_bullet,
+                  CupertinoIcons.list_bullet,
+                ),
+                _buildNavItem(2, CupertinoIcons.map, CupertinoIcons.map_fill),
+                _buildNavItem(
+                  3,
+                  CupertinoIcons.person,
+                  CupertinoIcons.person_fill,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon) {
+    bool isSelected = _currentIndex == index;
+    return InkWell(
+      onTap: () {
+        setState(() => _currentIndex = index);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              size: 24,
+            ),
+          ),
+          if (isSelected)
+            Container(
+              margin: const EdgeInsets.only(top: 2),
+              height: 4,
+              width: 4,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class DashboardHome extends StatelessWidget {
+  const DashboardHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: provider.isLoading && provider.households.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: _buildAppBar(context, provider)),
+                    SliverToBoxAdapter(child: _buildStatsBanner(provider)),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const SizedBox(height: 20),
+                          _buildQuickAction(context),
+                          const SizedBox(height: 25),
+                          _buildSectionHeader(
+                            'Yaqinda qo\'shilgan xonadonlar',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PatientListPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 15),
+                        ]),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final households = provider.households.reversed
+                                .toList();
+                            if (index >= households.length || index >= 10) {
+                              return null;
+                            }
+                            return HouseholdCard(household: households[index]);
+                          },
+                          childCount: provider.households.length > 10
+                              ? 10
+                              : provider.households.length,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'F.I.SH',
-                          prefixIcon: Icon(Icons.person),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                  ],
+                ),
+          // floatingActionButton: FloatingActionButton(
+          //   onPressed: () => _openAddPage(context),
+          //   backgroundColor: AppColors.primary,
+          //   child: const Icon(Icons.add, color: Colors.white),
+          // ),
+          // floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context, AppProvider provider) {
+    return Container(
+      padding: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 20),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hayirli kun!',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Punkt №7',
+                style: TextStyle(
+                  color: AppColors.textMain,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          CircleAvatar(
+            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.3),
+            radius: 24,
+            child: const Icon(
+              Icons.notifications_none,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsBanner(AppProvider provider) {
+    int totalResidents = 0;
+    for (var h in provider.households) {
+      totalResidents += h.residents.length;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          StatCard(
+            label: 'Xonadonlar',
+            value: provider.households.length.toString(),
+            icon: Icons.home_work_outlined,
+          ),
+          const SizedBox(width: 15),
+          StatCard(
+            label: 'Aholi soni',
+            value: totalResidents.toString(),
+            icon: Icons.people_outline,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context) {
+    return InkWell(
+      onTap: () => _openAddPage(context),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryDark],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Colors.white24,
+              radius: 28,
+              child: Icon(
+                Icons.add_location_alt_outlined,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 20),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Yangi xatlov',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Geolokatsiya va bemor ma\'lumotlari',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withValues(alpha: 0.54),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMain,
+          ),
+        ),
+        TextButton(
+          onPressed: onSeeAll,
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          child: const Text('Barchasi'),
+        ),
+      ],
+    );
+  }
+
+  void _openAddPage(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddFamilyPage()),
+    );
+    if (result == true) {
+      if (context.mounted) {
+        Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
+      }
+    }
+  }
+}
+
+class HouseholdsMapPage extends StatelessWidget {
+  const HouseholdsMapPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppProvider>(
+      builder: (context, provider, child) {
+        final households = provider.households;
+
+        return Scaffold(
+          body: Stack(
+            children: [
+              FlutterMap(
+                options: const MapOptions(
+                  initialCenter: LatLng(40.3864, 71.7825),
+                  initialZoom: 13.0,
+                  interactionOptions: InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  ),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
+                    userAgentPackageName: 'com.example.demoproject',
+                    maxZoom: 20,
+                  ),
+                  if (kShowMapBorder)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: kFerganaBorder,
+                          color: Colors.redAccent.withValues(alpha: 0.5),
+                          strokeWidth: 3,
                         ),
-                        validator: (val) =>
-                            val!.isEmpty ? 'F.I.SH kiritilishi shart' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Telefon Raqam',
-                          prefixIcon: Icon(Icons.phone),
-                        ),
-                        validator: (val) =>
-                            val!.isEmpty ? 'Telefon majburiy' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'Yashash Manzili (Uy/Kvartira)',
-                          prefixIcon: Icon(Icons.location_city),
-                        ),
-                        validator: (val) =>
-                            val!.isEmpty ? 'Manzil majburiy' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _familyCountController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Xonadon a\'zolari soni',
-                          prefixIcon: Icon(Icons.family_restroom),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Dinamik a'zolar ro'yxati
-                      ...List.generate(_memberNamesControllers.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: TextFormField(
-                            controller: _memberNamesControllers[index],
-                            decoration: InputDecoration(
-                              labelText: '${index + 1}-inson F.I.SH',
-                              prefixIcon: const Icon(
-                                Icons.person_add,
-                                size: 20,
+                      ],
+                    ),
+                  MarkerClusterLayerWidget(
+                    options: MarkerClusterLayerOptions(
+                      maxClusterRadius: 45,
+                      size: const Size(45, 45),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(50),
+                      maxZoom: 15,
+                      markers: households.map((h) {
+                        final hasHighRisk = h.residents.any(
+                          (r) => r.isHighRiskMock,
+                        );
+                        return Marker(
+                          point: LatLng(h.latitude, h.longitude),
+                          width: 45,
+                          height: 45,
+                          child: GestureDetector(
+                            onTap: () => _showInfo(context, h),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  color: hasHighRisk
+                                      ? AppColors.danger
+                                      : AppColors.primary,
+                                  size: 45,
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 8),
+                                  child: Icon(
+                                    Icons.family_restroom,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      builder: (context, markers) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(25),
+                            color: AppColors.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 10,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            ],
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              markers.length.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         );
-                      }),
-                      const SizedBox(height: 12),
-                      CheckboxListTile(
-                        title: const Text(
-                          'Xavf Guruhiga kiradimi? (Qizil hudud)',
-                        ),
-                        value: _isHighRisk,
-                        activeColor: AppColors.error,
-                        onChanged: (val) {
-                          setState(() {
-                            _isHighRisk = val ?? false;
-                          });
-                        },
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 60,
+                left: 20,
+                right: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Joylashuvni tanlang',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          TextButton.icon(
-                            onPressed: _openFullScreenMap,
-                            icon: const Icon(Icons.fullscreen, size: 20),
-                            label: const Text('To\'liq ekran'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Stack(
-                            children: [
-                              FlutterMap(
-                                mapController: _mapController,
-                                options: MapOptions(
-                                  initialCenter: _centerPosition,
-                                  initialZoom: 14.0,
-                                  minZoom: 5,
-                                  maxZoom: 18,
-                                  onPositionChanged: (position, hasGesture) {
-                                    constrainMap(position, _mapController);
-                                    if (hasGesture) {
-                                      _centerPosition = position.center;
-                                    }
-                                  },
-                                  interactionOptions: const InteractionOptions(
-                                    flags:
-                                        InteractiveFlag.all &
-                                        ~InteractiveFlag.rotate,
-                                  ),
-                                ),
-                                children: [
-                                  TileLayer(
-                                    urlTemplate:
-                                        'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
-                                    userAgentPackageName:
-                                        'com.example.demoproject',
-                                    maxZoom: 20,
-                                  ),
-                                  if (kShowMapBorder)
-                                    PolylineLayer(
-                                      polylines: [
-                                        Polyline(
-                                          points: kFerganaBorder,
-                                          color: Colors.redAccent,
-                                          strokeWidth: 3,
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                              const Center(
-                                child: Icon(
-                                  Icons.location_pin,
-                                  size: 30,
-                                  color: Colors.pink,
-                                ),
-                              ),
-                              Positioned(
-                                right: 8,
-                                bottom: 8,
-                                child: FloatingActionButton.small(
-                                  heroTag: 'dashboard_location_btn',
-                                  onPressed: _isLoadingLocation
-                                      ? null
-                                      : _getCurrentLocation,
-                                  backgroundColor: Colors.white,
-                                  child: _isLoadingLocation
-                                      ? const SizedBox(
-                                          width: 15,
-                                          height: 15,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.my_location,
-                                          color: Colors.blue,
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _submitForm,
-                        child: const Text('Saqlash va Yuborish'),
-                      ),
-                      const SizedBox(height: 40),
                     ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.map, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Xaritada ${households.length} ta xonadon',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMain,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showInfo(BuildContext context, HouseholdModel h) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(Icons.home_work, color: AppColors.primary, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    h.officialAddress,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
+            const Divider(height: 32),
+            const Text(
+              'Oila a\'zolari:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: h.residents.length,
+                separatorBuilder: (c, i) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final res = h.residents[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: res.isHighRiskMock
+                          ? AppColors.danger.withValues(alpha: 0.1)
+                          : AppColors.primary.withValues(alpha: 0.1),
+                      child: Icon(
+                        res.gender == 'FEMALE' ? Icons.woman : Icons.man,
+                        color: res.isHighRiskMock
+                            ? AppColors.danger
+                            : AppColors.primary,
+                      ),
+                    ),
+                    title: Text(
+                      res.displayFullName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      index == 0 ? 'Oila boshlig\'i' : 'Oila a\'zosi',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: res.isHighRiskMock
+                        ? const Icon(
+                            Icons.warning,
+                            color: AppColors.danger,
+                            size: 20,
+                          )
+                        : null,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Yopish',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  // Farg'ona viloyati aniq chegaralari (OSM asosida o'lchangan)
-  //   final List<LatLng> _ferganaBorder = const [
-  //     LatLng(40.4551648, 70.3281721),
-  //     LatLng(40.380107, 70.403696),
-  //     LatLng(40.3597413, 70.4587825),
-  //     LatLng(40.3478821, 70.5625151),
-  //     LatLng(40.3059275, 70.5630025),
-  //     LatLng(40.2757337, 70.5750552),
-  //     LatLng(40.258251, 70.5812361),
-  //     LatLng(40.2459105, 70.5957434),
-  //     LatLng(40.184815, 70.691624),
-  //     LatLng(40.2021394, 70.793518),
-  //     LatLng(40.220391, 70.8611865),
-  //     LatLng(40.2584562, 70.9745777),
-  //     LatLng(40.2883516, 70.9657635),
-  //     LatLng(40.2947689, 71.0143816),
-  //     LatLng(40.3050707, 71.0868092),
-  //     LatLng(40.3376154, 71.1886214),
-  //     LatLng(40.3258322, 71.2457714),
-  //     LatLng(40.3233338, 71.2480653),
-  //     LatLng(40.3339771, 71.2618738),
-  //     LatLng(40.3414502, 71.2827626),
-  //     LatLng(40.317913, 71.2969499),
-  //     LatLng(40.317971, 71.3252637),
-  //     LatLng(40.3197085, 71.3496042),
-  //     LatLng(40.3183036, 71.3698978),
-  //     LatLng(40.3063252, 71.3715955),
-  //     LatLng(40.3043087, 71.3981562),
-  //     LatLng(40.278593, 71.4547506),
-  //     LatLng(40.2782367, 71.4862213),
-  //     LatLng(40.2793037, 71.4933766),
-  //     LatLng(40.2767842, 71.5020901),
-  //     LatLng(40.2707071, 71.5100396),
-  //     LatLng(40.2635901, 71.512613),
-  //     LatLng(40.2484643, 71.512679),
-  //     LatLng(40.2261464, 71.5204514),
-  //     LatLng(40.2195084, 71.5526181),
-  //     LatLng(40.2160803, 71.5745691),
-  //     LatLng(40.2187459, 71.5839547),
-  //     LatLng(40.2107824, 71.5980632),
-  //     LatLng(40.2076068, 71.6136763),
-  //     LatLng(40.2164604, 71.6156214),
-  //     LatLng(40.2187242, 71.6272972),
-  //     LatLng(40.2361721, 71.6214354),
-  //     LatLng(40.2518418, 71.618625),
-  //     LatLng(40.2556499, 71.6181719),
-  //     LatLng(40.2668087, 71.6201316),
-  //     LatLng(40.2679712, 71.6435958),
-  //     LatLng(40.2636551, 71.6808915),
-  //     LatLng(40.2501736, 71.6887908),
-  //     LatLng(40.2333599, 71.700084),
-  //     LatLng(40.2187135, 71.6982271),
-  //     LatLng(40.2081417, 71.7040147),
-  //     LatLng(40.2069798, 71.6982837),
-  //     LatLng(40.1976831, 71.6955623),
-  //     LatLng(40.1915296, 71.7012155),
-  //     LatLng(40.1957219, 71.6869947),
-  //     LatLng(40.1959124, 71.6771076),
-  //     LatLng(40.1891983, 71.6845244),
-  //     LatLng(40.1842784, 71.6923555),
-  //     LatLng(40.1775065, 71.7090533),
-  //     LatLng(40.1511682, 71.7236231),
-  //     LatLng(40.1536735, 71.732024),
-  //     LatLng(40.1671625, 71.7451247),
-  //     LatLng(40.1778391, 71.7552422),
-  //     LatLng(40.2072643, 71.8042644),
-  //     LatLng(40.2044014, 71.8157475),
-  //     LatLng(40.2065715, 71.8321975),
-  //     LatLng(40.2521948, 71.8391874),
-  //     LatLng(40.2574466, 71.8595968),
-  //     LatLng(40.2624898, 71.8787564),
-  //     LatLng(40.2604052, 71.8910071),
-  //     LatLng(40.2570574, 71.9039825),
-  //     LatLng(40.2514669, 71.9268647),
-  //     LatLng(40.2401585, 71.9354609),
-  //     LatLng(40.2381175, 71.9465441),
-  //     LatLng(40.2457795, 71.9623418),
-  //     LatLng(40.2565838, 71.9785256),
-  //     LatLng(40.2687308, 72.0171613),
-  //     LatLng(40.2746719, 72.037558),
-  //     LatLng(40.2787712, 72.0520993),
-  //     LatLng(40.2911133, 72.0351882),
-  //     LatLng(40.2918194, 72.0294206),
-  //     LatLng(40.293267, 72.021881),
-  //     LatLng(40.2950125, 72.0122143),
-  //     LatLng(40.2969759, 72.0041355),
-  //     LatLng(40.29814, 71.9960145),
-  //     LatLng(40.300947, 71.9895261),
-  //     LatLng(40.3021703, 71.9838037),
-  //     LatLng(40.3108299, 71.9723077),
-  //     LatLng(40.320443, 71.9654099),
-  //     LatLng(40.3255474, 71.9721653),
-  //     LatLng(40.3543236, 72.0194648),
-  //     LatLng(40.3901716, 72.0632979),
-  //     LatLng(40.4103467, 72.0929647),
-  //     LatLng(40.4179204, 72.1017923),
-  //     LatLng(40.429076, 72.1078215),
-  //     LatLng(40.4419383, 72.1038029),
-  //     LatLng(40.4574867, 72.1213632),
-  //     LatLng(40.4924813, 72.1764959),
-  //     LatLng(40.5390354, 72.2345647),
-  //     LatLng(40.5567245, 72.211868),
-  //     LatLng(40.5648637, 72.1645878),
-  //     LatLng(40.5958695, 72.1084642),
-  //     LatLng(40.6162491, 72.0726138),
-  //     LatLng(40.6134312, 72.0638323),
-  //     LatLng(40.6121118, 72.0607531),
-  //     LatLng(40.6117779, 72.0589399),
-  //     LatLng(40.6115437, 72.0571187),
-  //     LatLng(40.611843, 72.0537579),
-  //     LatLng(40.6121729, 72.050668),
-  //     LatLng(40.612405, 72.0466608),
-  //     LatLng(40.6127919, 72.0420581),
-  //     LatLng(40.6130362, 72.0386463),
-  //     LatLng(40.6135615, 72.0299989),
-  //     LatLng(40.6139443, 72.0246506),
-  //     LatLng(40.6146549, 72.0151475),
-  //     LatLng(40.61343, 71.9880422),
-  //     LatLng(40.6211191, 71.9743216),
-  //     LatLng(40.6218032, 71.9602561),
-  //     LatLng(40.6226297, 71.938675),
-  //     LatLng(40.6453917, 71.8586991),
-  //     LatLng(40.668927, 71.8269848),
-  //     LatLng(40.7116913, 71.7415805),
-  //     LatLng(40.7281055, 71.6740317),
-  //     LatLng(40.7005646, 71.631655),
-  //     LatLng(40.6504944, 71.5801672),
-  //     LatLng(40.7284892, 71.4813107),
-  //     LatLng(40.6878307, 71.351324),
-  //     LatLng(40.6824598, 71.1614969),
-  //     LatLng(40.7495602, 71.0707067),
-  //     LatLng(40.739921, 70.9738993),
-  //     LatLng(40.7541161, 70.9448823),
-  //     LatLng(40.7534986, 70.9238068),
-  //     LatLng(40.7408293, 70.8951371),
-  //     LatLng(40.7335534, 70.8389533),
-  //     LatLng(40.7175278, 70.7783572),
-  //     LatLng(40.6838515, 70.7472528),
-  //     LatLng(40.6549488, 70.7282424),
-  //     LatLng(40.6390859, 70.6692633),
-  //     LatLng(40.5974604, 70.616801),
-  //     LatLng(40.5543623, 70.5532202),
-  //     LatLng(40.5140484, 70.4936537),
-  //     LatLng(40.4815448, 70.3995832),
-  //     LatLng(40.4551648, 70.3281721),
-  //   ];
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({super.key});
 
-  //   void _constrainMap(MapCamera camera) {
-  //     if (_ferganaBorder.isEmpty) return;
-
-  //     final bounds = LatLngBounds.fromPoints(_ferganaBorder);
-
-  //     if (!bounds.contains(camera.center)) {
-  //       WidgetsBinding.instance.addPostFrameCallback((_) {
-  //         try {
-  //           _mapController.move(
-  //               const LatLng(40.3864, 71.7825), _mapController.camera.zoom);
-  //         } catch (e) {
-  //           debugPrint("Move error: $e");
-  //         }
-  //       });
-  //     }
-  //   }
-  //
+  @override
+  Widget build(BuildContext context) {
+    final provider = Provider.of<AppProvider>(context);
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Profil')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const CircleAvatar(
+              radius: 50,
+              backgroundColor: AppColors.primaryLight,
+              child: Icon(Icons.person, size: 50, color: AppColors.primaryDark),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              provider.currentUser?.fullName ?? 'Hatlovchi App',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
+            ),
+            const Spacer(),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: () {
+                provider.logout();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+              child: const Text(
+                'Tizimdan chiqish',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+    );
+  }
 }

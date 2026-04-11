@@ -1,11 +1,11 @@
-import 'package:demoproject/pages/login.dart';
-import 'package:demoproject/theme/app_theme.dart';
-import 'package:demoproject/utils/locale_provider.dart';
+import 'package:beemor/pages/login.dart';
+import 'package:beemor/theme/app_theme.dart';
+import 'package:beemor/utils/locale_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:demoproject/l10n/app_localizations.dart';
+import 'package:beemor/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:demoproject/providers/app_provider.dart';
+import 'package:beemor/providers/app_provider.dart';
 
 void main() {
   runApp(
