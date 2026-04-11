@@ -70,6 +70,9 @@ class ResidentModel {
       'gender': gender,
       if (role != null) 'role': role,
       'is_active': isActive,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'isHighRiskMock': isHighRiskMock,
     };
   }
 

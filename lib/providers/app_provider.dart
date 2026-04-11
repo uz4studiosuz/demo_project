@@ -73,6 +73,8 @@ class AppProvider extends ChangeNotifier {
           firstName: res.firstName,
           lastName: res.lastName,
           phonePrimary: res.phonePrimary,
+          gender: res.gender,
+          role: res.role,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -82,6 +84,24 @@ class AppProvider extends ChangeNotifier {
       // Refresh list
       await fetchHouseholds();
       
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  // Update Household
+  Future<bool> updateHousehold(HouseholdModel household) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final result = await _apiService.updateHousehold(household);
+    if (result != null) {
+      await fetchHouseholds();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -105,6 +125,42 @@ class AppProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return success;
+  }
+
+  // Delete Resident
+  Future<bool> deleteResident(int residentId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    bool success = await _apiService.deleteResident(residentId);
+    if (success) {
+      // Lokal ro'yxatdan ham olib tashlash
+      for (var hh in _households) {
+        hh.residents.removeWhere((r) => r.id == residentId);
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return success;
+  }
+
+  // Update Resident
+  Future<bool> updateResident(ResidentModel resident) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final result = await _apiService.updateResident(resident);
+    if (result != null) {
+      await fetchHouseholds();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
 
   void logout() {

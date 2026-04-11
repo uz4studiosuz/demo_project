@@ -81,6 +81,9 @@ class HouseholdModel {
       'longitude': longitude,
       'is_verified': isVerified,
       'is_active': isActive,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'residents': residents.map((r) => r.toJson()).toList(),
     };
   }
 }

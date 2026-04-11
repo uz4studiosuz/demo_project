@@ -1,110 +1,148 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http; // TODO: REAL_API_INTEGRATION - http yoki dio paketlari orqali
 
+/// Lokal saqlash bilan ishlaydigan API service.
+/// SharedPreferences orqali ma'lumotlarni disk'ga saqlaydi.
+/// Ilova qayta ishga tushirilsa ham barcha xatlovlar saqlanib qoladi.
 class ApiService {
-  // TODO: REAL_API_INTEGRATION - Haqiqiy backend API manzili
-  // static const String baseUrl = "http://localhost:3000/api/v1";
+  // SharedPreferences kalit nomi
+  static const String _storageKey = 'households_data';
 
-  // MOCK DATA
-  final List<HouseholdModel> _mockHouseholds = [
-    HouseholdModel(
-      id: 1,
-      regionId: 1,
-      districtId: 1,
-      createdByAgentId: 1,
-      officialAddress: "Farg'ona shahri, Mustang ko'chasi, 45-uy",
-      latitude: 40.3860,
-      longitude: 71.7825,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      residents: [
-        ResidentModel(
-          id: 1,
-          householdId: 1,
-          firstName: 'Alisher',
-          lastName: 'Sodikov',
-          phonePrimary: '+998901234567',
-          isHighRiskMock: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        ResidentModel(
-          id: 2,
-          householdId: 1,
-          firstName: 'Nargiza',
-          lastName: 'Sodikova',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        )
-      ],
-    ),
-    HouseholdModel(
-      id: 2,
-      regionId: 1,
-      districtId: 2,
-      createdByAgentId: 1,
-      officialAddress: "Marg'ilon shahri, B.Marg'iloniy ko'chasi, 12-uy",
-      latitude: 40.4515,
-      longitude: 71.7310,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      residents: [
-        ResidentModel(
-          id: 3,
-          householdId: 2,
-          firstName: 'Dilshod',
-          lastName: 'Toshmatov',
-          phonePrimary: '+998939876543',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        )
-      ],
-    ),
-  ];
+  // Xotiradagi cache — har safar diskdan o'qimaslik uchun
+  List<HouseholdModel>? _cache;
+
+  // ─── Boshlang'ich demo ma'lumotlar ────────────────────────────
+  List<HouseholdModel> _getDefaultData() {
+    return [
+      HouseholdModel(
+        id: 1,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "O'zbekiston tumani, Yakkatut, Go'zal diyor 156",
+        latitude: 40.440239,
+        longitude: 70.883328,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 1,
+            householdId: 1,
+            firstName: 'Alisher',
+            lastName: 'Sodikov',
+            phonePrimary: '+998901234567',
+            isHighRiskMock: true,
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+          ResidentModel(
+            id: 2,
+            householdId: 1,
+            firstName: 'Nargiza',
+            lastName: 'Sodikova',
+            gender: 'FEMALE',
+            role: 'Turmush o\'rtog\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 2,
+        regionId: 1,
+        districtId: 2,
+        createdByAgentId: 1,
+        officialAddress: "O'zbekiston tumani, Qudash, Mustaqillik 23",
+        latitude: 40.429293,
+        longitude: 70.877771,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 3,
+            householdId: 2,
+            firstName: 'Dilshod',
+            lastName: 'Toshmatov',
+            phonePrimary: '+998939876543',
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  DISK BILAN ISHLASH
+  // ═══════════════════════════════════════════════════════════════
+
+  /// SharedPreferences'dan barcha xatlovlarni o'qiydi
+  Future<List<HouseholdModel>> _loadFromDisk() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_storageKey);
+
+    if (jsonStr == null) {
+      // Birinchi marta — demo ma'lumotlarni saqlaymiz
+      final defaults = _getDefaultData();
+      await _saveToDisk(defaults);
+      return defaults;
+    }
+
+    try {
+      final List<dynamic> jsonList = json.decode(jsonStr);
+      return jsonList.map((e) => HouseholdModel.fromJson(e)).toList();
+    } catch (e) {
+      // Agar JSON buzilgan bo'lsa — qaytadan default
+      final defaults = _getDefaultData();
+      await _saveToDisk(defaults);
+      return defaults;
+    }
+  }
+
+  /// Barcha xatlovlarni diskka saqlaydi
+  Future<void> _saveToDisk(List<HouseholdModel> households) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = json.encode(households.map((h) => h.toJson()).toList());
+    await prefs.setString(_storageKey, jsonStr);
+  }
+
+  /// Cache'ni yangilaydi va diskka saqlaydi
+  Future<void> _syncToDisk() async {
+    if (_cache != null) {
+      await _saveToDisk(_cache!);
+    }
+  }
+
+  /// Cache'ni yuklaydi (lazy initialization)
+  Future<List<HouseholdModel>> _getCache() async {
+    _cache ??= await _loadFromDisk();
+    return _cache!;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  CRUD OPERATSIYALAR
+  // ═══════════════════════════════════════════════════════════════
 
   /// Hamma householdlarni olib kelish
   /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` va uning `@Get()` endpointi bilan ulanadi
   Future<List<HouseholdModel>> getHouseholds() async {
-    /* 
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/households'),
-        headers: await _getHeaders(),
-      );
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.map((e) => HouseholdModel.fromJson(e)).toList();
-      }
-    } catch(e) {
-      print(e);
-    }
-    */
-    await Future.delayed(const Duration(seconds: 1));
-    return [..._mockHouseholds];
+    final data = await _getCache();
+    return [...data]; // Copy qaytarish (tashqi mutatsiyani oldini olish uchun)
   }
 
-  /// Yangi xonadon (Household) yaratish
-  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` `@Post()` bilan ulanadi
+  /// Yangi xonadon yaratish
+  /// TODO: REAL_API_INTEGRATION - NestJS `@Post()`
   Future<HouseholdModel?> createHousehold(HouseholdModel household) async {
-    /*
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/households'),
-        body: jsonEncode(household.toJson()),
-        headers: await _getHeaders(),
-      );
-      if (response.statusCode == 201) {
-        return HouseholdModel.fromJson(jsonDecode(response.body));
-      }
-    } catch(e) {
-      // print("Save error: $e");
-    }
-    return null;
-    */
-    await Future.delayed(const Duration(seconds: 1));
-    final newId = _mockHouseholds.isEmpty ? 1 : _mockHouseholds.last.id + 1;
+    final data = await _getCache();
+    final newId = data.isEmpty
+        ? 1
+        : data.fold<int>(0, (max, h) => h.id > max ? h.id : max) + 1;
     final newHh = HouseholdModel(
       id: newId,
       regionId: household.regionId,
@@ -117,76 +155,109 @@ class ApiService {
       updatedAt: DateTime.now(),
       residents: [],
     );
-    _mockHouseholds.add(newHh);
-    // print("ApiService (Mock): Xonadon saqlandi: ${newHh.id}");
+    data.add(newHh);
+    await _syncToDisk();
     return newHh;
   }
 
-  /// Xonadonga yangi yashovchi (Resident) qo'shish
-  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `ResidentController` `@Post()` bilan ulanadi
-  Future<ResidentModel?> createResident(ResidentModel resident) async {
-    /*
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/residents'),
-        body: jsonEncode(resident.toJson()),
-        headers: await _getHeaders(),
-      );
-      if (response.statusCode == 201) {
-        return ResidentModel.fromJson(jsonDecode(response.body));
-      }
-      // print("Save error: $e");
-    }
-    return null;
-    */
-    await Future.delayed(const Duration(seconds: 1));
-    final hhIndex = _mockHouseholds.indexWhere((h) => h.id == resident.householdId);
-    if (hhIndex != -1) {
-      final hh = _mockHouseholds[hhIndex];
-      final newId = hh.residents.isEmpty ? (hh.id * 100) : hh.residents.last.id + 1; // mock ID gen
-      
-      final newRes = ResidentModel(
-        id: newId,
-        householdId: hh.id,
-        firstName: resident.firstName,
-        lastName: resident.lastName,
-        phonePrimary: resident.phonePrimary,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      
-      hh.residents.add(newRes);
-      // print("ApiService (Mock): Yashovchi saqlandi: ${newRes.id}");
-      return newRes;
-    }
-    return null;
+  /// Xonadonni tahrirlash (yangilash)
+  /// TODO: REAL_API_INTEGRATION - NestJS `@Patch(':id')`
+  Future<HouseholdModel?> updateHousehold(HouseholdModel household) async {
+    final data = await _getCache();
+    final idx = data.indexWhere((h) => h.id == household.id);
+    if (idx == -1) return null;
+
+    final updated = HouseholdModel(
+      id: household.id,
+      regionId: household.regionId,
+      districtId: household.districtId,
+      createdByAgentId: household.createdByAgentId,
+      officialAddress: household.officialAddress,
+      latitude: household.latitude,
+      longitude: household.longitude,
+      createdAt: data[idx].createdAt,
+      updatedAt: DateTime.now(),
+      residents: household.residents,
+    );
+    data[idx] = updated;
+    await _syncToDisk();
+    return updated;
   }
 
   /// Xonadonni o'chirish
-  /// TODO: REAL_API_INTEGRATION - NestJS-dagi `HouseholdController` `@Delete(':id')` bilan ulanadi
+  /// TODO: REAL_API_INTEGRATION - NestJS `@Delete(':id')`
   Future<bool> deleteHousehold(int id) async {
-    /*
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/households/$id'),
-        headers: await _getHeaders(),
-      );
-      return response.statusCode == 200 || response.statusCode == 204;
-    } catch(e) {
-      return false;
-    }
-    */
-    await Future.delayed(const Duration(seconds: 1));
-    _mockHouseholds.removeWhere((h) => h.id == id);
-    // print("ApiService (Mock): Xonadon o'chirildi: $id");
+    final data = await _getCache();
+    data.removeWhere((h) => h.id == id);
+    await _syncToDisk();
     return true;
   }
 
-  // TODO: REAL_API_INTEGRATION - Interceptor logikasi (Token qo'shish uchun xizmat qiladi)
+  /// Yashovchi qo'shish
+  /// TODO: REAL_API_INTEGRATION - NestJS `@Post()`
+  Future<ResidentModel?> createResident(ResidentModel resident) async {
+    final data = await _getCache();
+    final hhIndex = data.indexWhere((h) => h.id == resident.householdId);
+    if (hhIndex == -1) return null;
+
+    final hh = data[hhIndex];
+    // Yangi ID generatsiya
+    int maxId = 0;
+    for (var h in data) {
+      for (var r in h.residents) {
+        if (r.id > maxId) maxId = r.id;
+      }
+    }
+    final newId = maxId + 1;
+
+    final newRes = ResidentModel(
+      id: newId,
+      householdId: hh.id,
+      firstName: resident.firstName,
+      lastName: resident.lastName,
+      phonePrimary: resident.phonePrimary,
+      gender: resident.gender,
+      role: resident.role,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    hh.residents.add(newRes);
+    await _syncToDisk();
+    return newRes;
+  }
+
+  /// Yashovchini tahrirlash
+  Future<ResidentModel?> updateResident(ResidentModel resident) async {
+    final data = await _getCache();
+    for (var hh in data) {
+      final rIdx = hh.residents.indexWhere((r) => r.id == resident.id);
+      if (rIdx != -1) {
+        hh.residents[rIdx] = resident;
+        await _syncToDisk();
+        return resident;
+      }
+    }
+    return null;
+  }
+
+  /// Yashovchini o'chirish
+  Future<bool> deleteResident(int residentId) async {
+    final data = await _getCache();
+    for (var hh in data) {
+      final rIdx = hh.residents.indexWhere((r) => r.id == residentId);
+      if (rIdx != -1) {
+        hh.residents.removeAt(rIdx);
+        await _syncToDisk();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // TODO: REAL_API_INTEGRATION - Interceptor logikasi
   /*
   Future<Map<String, String>> _getHeaders() async {
-    // Shoxobcha: auth_service dan accessToken ni olib kelib headerga uramiz
-    // final token = await authService.getToken(); 
     return {
       'Content-Type': 'application/json',
       // 'Authorization': 'Bearer $token',
