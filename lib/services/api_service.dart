@@ -33,7 +33,7 @@ class ApiService {
             firstName: 'Alisher',
             lastName: 'Sodikov',
             phonePrimary: '+998901234567',
-            isHighRiskMock: true,
+            isHighRiskMock: false,
             gender: 'MALE',
             role: 'Oila boshlig\'i',
             createdAt: DateTime.now(),
@@ -75,6 +75,150 @@ class ApiService {
           ),
         ],
       ),
+      HouseholdModel(
+        id: 3,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Farg'ona sh., S. Temur ko'chasi, 45-uy",
+        latitude: 40.3842,
+        longitude: 71.7825,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 4,
+            householdId: 3,
+            firstName: 'Bobur',
+            lastName: 'Karimov',
+            phonePrimary: '+998901112233',
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 4,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Farg'ona sh., Murabbiylar ko'chasi, 12-uy",
+        latitude: 40.3885,
+        longitude: 71.7890,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 5,
+            householdId: 4,
+            firstName: 'Malika',
+            lastName: 'Azimova',
+            phonePrimary: '+998912223344',
+            gender: 'FEMALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 5,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Marg'ilon sh., Navoiy ko'chasi, 88-uy",
+        latitude: 40.4685,
+        longitude: 71.7330,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 6,
+            householdId: 5,
+            firstName: 'Jasur',
+            lastName: 'Hamidov',
+            phonePrimary: '+998943334455',
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 6,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Qo'qon sh., Turkiston ko'chasi, 5-uy",
+        latitude: 40.5315,
+        longitude: 70.9410,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 7,
+            householdId: 6,
+            firstName: 'Bekzod',
+            lastName: 'Ismoilov',
+            phonePrimary: '+998974445566',
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 7,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Quva tumani, Markaz, Guliston ko'chasi",
+        latitude: 40.5210,
+        longitude: 72.0120,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 8,
+            householdId: 7,
+            firstName: 'Ziyoda',
+            lastName: 'Umarova',
+            phonePrimary: '+998991110099',
+            gender: 'FEMALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      HouseholdModel(
+        id: 8,
+        regionId: 1,
+        districtId: 1,
+        createdByAgentId: 1,
+        officialAddress: "Rishton tumani, Kulolchilar mahallasi",
+        latitude: 40.3560,
+        longitude: 71.2850,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        residents: [
+          ResidentModel(
+            id: 9,
+            householdId: 8,
+            firstName: 'G\'olib',
+            lastName: 'Rahmonov',
+            phonePrimary: '+998905556677',
+            gender: 'MALE',
+            role: 'Oila boshlig\'i',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
     ];
   }
 
@@ -86,20 +230,36 @@ class ApiService {
   Future<List<HouseholdModel>> _loadFromDisk() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_storageKey);
+    final defaults = _getDefaultData();
 
     if (jsonStr == null) {
       // Birinchi marta — demo ma'lumotlarni saqlaymiz
-      final defaults = _getDefaultData();
       await _saveToDisk(defaults);
       return defaults;
     }
 
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      return jsonList.map((e) => HouseholdModel.fromJson(e)).toList();
+      final List<HouseholdModel> diskData = jsonList
+          .map((e) => HouseholdModel.fromJson(e))
+          .toList();
+
+      // Yangi qo'shilgan demo ma'lumotlarni tekshiramiz va qo'shamiz
+      bool changed = false;
+      for (var defHh in defaults) {
+        if (!diskData.any((h) => h.id == defHh.id)) {
+          diskData.add(defHh);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        await _saveToDisk(diskData);
+      }
+
+      return diskData;
     } catch (e) {
       // Agar JSON buzilgan bo'lsa — qaytadan default
-      final defaults = _getDefaultData();
       await _saveToDisk(defaults);
       return defaults;
     }

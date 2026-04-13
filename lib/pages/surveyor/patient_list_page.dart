@@ -16,7 +16,7 @@ class PatientListPage extends StatefulWidget {
 
 class _PatientListPageState extends State<PatientListPage> {
   final _searchController = TextEditingController();
-  String _filterType = 'all'; // all, high_risk, multi_resident
+  String _filterType = 'all'; // all, multi_resident
   String _searchQuery = '';
 
   @override
@@ -46,11 +46,7 @@ class _PatientListPageState extends State<PatientListPage> {
       }).toList();
     }
 
-    if (_filterType == 'high_risk') {
-      households = households
-          .where((h) => h.residents.any((r) => r.isHighRiskMock))
-          .toList();
-    } else if (_filterType == 'multi_resident') {
+    if (_filterType == 'multi_resident') {
       households = households.where((h) => h.residents.length > 2).toList();
     }
 
@@ -102,8 +98,6 @@ class _PatientListPageState extends State<PatientListPage> {
                     child: Row(
                       children: [
                         _buildFilterChip('Hammasi', 'all'),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('Xavfli guruh', 'high_risk'),
                         const SizedBox(width: 8),
                         _buildFilterChip('Ko\'p a\'zoli', 'multi_resident'),
                       ],
@@ -311,22 +305,7 @@ class _PatientListPageState extends State<PatientListPage> {
               ],
             ),
           ),
-          if (resident.isHighRiskMock)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Xavfli',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+
         ],
       ),
     );

@@ -14,16 +14,14 @@ class HouseholdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasHighRisk = household.residents.any((r) => r.isHighRiskMock);
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: hasHighRisk ? AppColors.danger : Colors.grey.withValues(alpha: 0.1),
-            width: hasHighRisk ? 1.5 : 1.0,
+            color: Colors.grey.withValues(alpha: 0.1),
+            width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
@@ -42,14 +40,12 @@ class HouseholdCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: hasHighRisk
-                      ? AppColors.danger.withValues(alpha: 0.1)
-                      : AppColors.primary.withValues(alpha: 0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.home_filled,
-                  color: hasHighRisk ? AppColors.danger : AppColors.primary,
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(width: 16),

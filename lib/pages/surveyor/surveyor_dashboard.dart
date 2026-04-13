@@ -14,6 +14,7 @@ import '../../additional/map_border.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:geolocator/geolocator.dart';
 
 class SurveyorDashboard extends StatefulWidget {
   const SurveyorDashboard({super.key});
@@ -157,7 +158,23 @@ class DashboardHome extends StatelessWidget {
               ? const Center(child: CircularProgressIndicator())
               : CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: _buildAppBar(context, provider)),
+                    SliverAppBar(
+                      pinned: true,
+                      expandedHeight: 120,
+                      backgroundColor: AppColors.surface,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: _buildAppBar(context, provider),
+                        collapseMode: CollapseMode.pin,
+                      ),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          bottom: Radius.circular(24),
+                        ),
+                      ),
+                    ),
                     SliverToBoxAdapter(child: _buildStatsBanner(provider)),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -166,17 +183,14 @@ class DashboardHome extends StatelessWidget {
                           const SizedBox(height: 20),
                           _buildQuickAction(context),
                           const SizedBox(height: 25),
-                          _buildSectionHeader(
-                            'Yaqinda qo\'shilgan xonadonlar',
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const PatientListPage(),
-                                ),
-                              );
-                            },
-                          ),
+                          _buildSectionHeader('Yaqinda qo\'shilganlar', () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PatientListPage(),
+                              ),
+                            );
+                          }),
                           const SizedBox(height: 15),
                         ]),
                       ),
@@ -215,14 +229,7 @@ class DashboardHome extends StatelessWidget {
 
   Widget _buildAppBar(BuildContext context, AppProvider provider) {
     return Container(
-      padding: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 20),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
+      padding: const EdgeInsets.only(top: 45, left: 20, right: 20, bottom: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -243,15 +250,6 @@ class DashboardHome extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          CircleAvatar(
-            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.3),
-            radius: 24,
-            child: const Icon(
-              Icons.notifications_none,
-              color: AppColors.primary,
-              size: 28,
-            ),
           ),
         ],
       ),
@@ -330,7 +328,7 @@ class DashboardHome extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Geolokatsiya va bemor ma\'lumotlari',
+                    'Geolokatsiya va oila ma\'lumotlari',
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
@@ -381,8 +379,68 @@ class DashboardHome extends StatelessWidget {
   }
 }
 
-class HouseholdsMapPage extends StatelessWidget {
+class HouseholdsMapPage extends StatefulWidget {
   const HouseholdsMapPage({super.key});
+
+  @override
+  State<HouseholdsMapPage> createState() => _HouseholdsMapPageState();
+}
+
+class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
+  final MapController _mapController = MapController();
+
+  Future<void> _goToMyLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Tekshiramiz: Joylashuv xizmati yoqilganmi?
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')),
+        );
+      }
+      return;
+    }
+
+    // Ruxsatlarni tekshiramiz
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Joylashuvga ruxsat berilmadi')),
+          );
+        }
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Joylashuv ruxsati butunlay rad etilgan'),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Hozirgi joylashuvni olish
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      _mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Joylashuvni aniqlashda xatolik: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -394,6 +452,7 @@ class HouseholdsMapPage extends StatelessWidget {
           body: Stack(
             children: [
               FlutterMap(
+                mapController: _mapController,
                 options: const MapOptions(
                   initialCenter: LatLng(40.3864, 71.7825),
                   initialZoom: 13.0,
@@ -426,9 +485,7 @@ class HouseholdsMapPage extends StatelessWidget {
                       padding: const EdgeInsets.all(50),
                       maxZoom: 15,
                       markers: households.map((h) {
-                        final hasHighRisk = h.residents.any(
-                          (r) => r.isHighRiskMock,
-                        );
+                        // final hasHighRisk = h.residents.any((r) => r.isHighRiskMock);
                         return Marker(
                           point: LatLng(h.latitude, h.longitude),
                           width: 45,
@@ -440,9 +497,7 @@ class HouseholdsMapPage extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.location_on,
-                                  color: hasHighRisk
-                                      ? AppColors.danger
-                                      : AppColors.primary,
+                                  color: AppColors.primary,
                                   size: 45,
                                 ),
                                 const Padding(
@@ -522,6 +577,22 @@ class HouseholdsMapPage extends StatelessWidget {
               ),
             ],
           ),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 90),
+            child: FloatingActionButton.extended(
+              onPressed: _goToMyLocation,
+              backgroundColor: Colors.white,
+              elevation: 4,
+              icon: const Icon(Icons.my_location, color: AppColors.primary),
+              label: const Text(
+                'Yaqin hudud',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -591,14 +662,10 @@ class HouseholdsMapPage extends StatelessWidget {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
-                      backgroundColor: res.isHighRiskMock
-                          ? AppColors.danger.withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       child: Icon(
                         res.gender == 'FEMALE' ? Icons.woman : Icons.man,
-                        color: res.isHighRiskMock
-                            ? AppColors.danger
-                            : AppColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                     title: Text(
@@ -609,13 +676,7 @@ class HouseholdsMapPage extends StatelessWidget {
                       index == 0 ? 'Oila boshlig\'i' : 'Oila a\'zosi',
                       style: const TextStyle(fontSize: 12),
                     ),
-                    trailing: res.isHighRiskMock
-                        ? const Icon(
-                            Icons.warning,
-                            color: AppColors.danger,
-                            size: 20,
-                          )
-                        : null,
+                    trailing: null,
                   );
                 },
               ),

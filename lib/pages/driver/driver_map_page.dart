@@ -847,7 +847,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                       children: [
                                         Icon(
                                           widget.targetResident?.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
-                                          color: widget.targetResident?.isHighRiskMock == true ? AppColors.danger : AppColors.primary,
+                                          color: AppColors.primary,
                                           size: 20,
                                         ),
                                         const SizedBox(width: 8),
@@ -911,7 +911,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                   children: [
                                     Icon(
                                       widget.targetResident?.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
-                                      color: widget.targetResident?.isHighRiskMock == true ? AppColors.danger : AppColors.primary,
+                                      color: AppColors.primary,
                                       size: 24,
                                     ),
                                     const SizedBox(height: 2),
@@ -1378,12 +1378,10 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
                       radius: 20,
-                      backgroundColor: res.isHighRiskMock
-                          ? AppColors.danger.withValues(alpha: 0.1)
-                          : AppColors.background,
+                          backgroundColor: AppColors.background,
                       child: Icon(
                         res.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
-                        color: res.isHighRiskMock ? AppColors.danger : AppColors.textSecondary,
+                        color: AppColors.textSecondary,
                         size: 20,
                       ),
                     ),
@@ -1403,16 +1401,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                         ),
                       ],
                     ),
-                    trailing: res.isHighRiskMock
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.danger.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text('Xavfli', style: TextStyle(color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.bold)),
-                          )
-                        : null,
+                    trailing: null,
                   );
                 },
               ),
