@@ -1,15 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
-import '../utils/mock_data.dart';
 
 /// Lokal saqlash bilan ishlaydigan API service.
 /// SharedPreferences orqali ma'lumotlarni disk'ga saqlaydi.
 class ApiService {
   static const String _storageKey = 'households_data';
-  static const int _mockVersion = 7; // Oshirish orqali keshni tozalab qayta yuklanadi
+  static const int _mockVersion = 8; // Oshirildi
   static const String _versionKey = 'mock_data_version';
+  static const String _mockAssetPath = 'assets/data/mock_data.json';
 
   List<HouseholdModel>? _cache;
 
@@ -24,7 +25,7 @@ class ApiService {
     final savedVersion = prefs.getInt(_versionKey) ?? 0;
     if (savedVersion < _mockVersion) {
       // Yangi mock data yuklaymiz
-      final defaults = _parseMockData();
+      final defaults = await _fetchMockData();
       await _saveToDisk(prefs, defaults);
       await prefs.setInt(_versionKey, _mockVersion);
       return defaults;
@@ -32,7 +33,7 @@ class ApiService {
 
     final jsonStr = prefs.getString(_storageKey);
     if (jsonStr == null || jsonStr.isEmpty) {
-      final defaults = _parseMockData();
+      final defaults = await _fetchMockData();
       await _saveToDisk(prefs, defaults);
       return defaults;
     }
@@ -41,15 +42,21 @@ class ApiService {
       final List<dynamic> jsonList = json.decode(jsonStr);
       return jsonList.map((e) => HouseholdModel.fromJson(e)).toList();
     } catch (_) {
-      final defaults = _parseMockData();
+      final defaults = await _fetchMockData();
       await _saveToDisk(prefs, defaults);
       return defaults;
     }
   }
 
-  List<HouseholdModel> _parseMockData() {
-    final List<dynamic> jsonList = json.decode(kMockHouseholdsJson);
-    return jsonList.map((e) => HouseholdModel.fromJson(e)).toList();
+  Future<List<HouseholdModel>> _fetchMockData() async {
+    try {
+      final String jsonStr = await rootBundle.loadString(_mockAssetPath);
+      final List<dynamic> jsonList = json.decode(jsonStr);
+      return jsonList.map((e) => HouseholdModel.fromJson(e)).toList();
+    } catch (e) {
+      // Xatolik bo'lsa bo'sh ro'yxat
+      return [];
+    }
   }
 
   Future<void> _saveToDisk(SharedPreferences prefs, List<HouseholdModel> households) async {
