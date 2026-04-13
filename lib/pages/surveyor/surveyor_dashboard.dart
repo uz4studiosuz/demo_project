@@ -15,6 +15,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../widgets/household_info_sheet.dart';
 
 class SurveyorDashboard extends StatefulWidget {
   const SurveyorDashboard({super.key});
@@ -153,83 +154,55 @@ class DashboardHome extends StatelessWidget {
     return Consumer<AppProvider>(
       builder: (context, provider, child) {
         return Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.surface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            automaticallyImplyLeading: false,
+            toolbarHeight: 100,
+            title: _buildAppBar(context, provider),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+            ),
+          ),
           body: provider.isLoading && provider.households.isEmpty
               ? const Center(child: CircularProgressIndicator())
-              : CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      pinned: true,
-                      expandedHeight: 120,
-                      backgroundColor: AppColors.surface,
-                      elevation: 0,
-                      scrolledUnderElevation: 0,
-                      automaticallyImplyLeading: false,
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: _buildAppBar(context, provider),
-                        collapseMode: CollapseMode.pin,
-                      ),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          bottom: Radius.circular(24),
+              : ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    _buildStatsBanner(provider),
+                    const SizedBox(height: 20),
+                    _buildQuickAction(context),
+                    const SizedBox(height: 25),
+                    _buildSectionHeader('Yaqinda qo\'shilganlar', () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PatientListPage(),
                         ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(child: _buildStatsBanner(provider)),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          const SizedBox(height: 20),
-                          _buildQuickAction(context),
-                          const SizedBox(height: 25),
-                          _buildSectionHeader('Yaqinda qo\'shilganlar', () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PatientListPage(),
-                              ),
-                            );
-                          }),
-                          const SizedBox(height: 15),
-                        ]),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final households = provider.households.reversed
-                                .toList();
-                            if (index >= households.length || index >= 10) {
-                              return null;
-                            }
-                            return HouseholdCard(household: households[index]);
-                          },
-                          childCount: provider.households.length > 10
-                              ? 10
-                              : provider.households.length,
+                      );
+                    }),
+                    const SizedBox(height: 15),
+                    ...provider.households.reversed
+                        .take(10)
+                        .map(
+                          (h) => HouseholdCard(
+                            household: h,
+                            onTap: () => showHouseholdInfoSheet(context, h),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    const SizedBox(height: 120),
                   ],
                 ),
-          // floatingActionButton: FloatingActionButton(
-          //   onPressed: () => _openAddPage(context),
-          //   backgroundColor: AppColors.primary,
-          //   child: const Icon(Icons.add, color: Colors.white),
-          // ),
-          // floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );
   }
 
   Widget _buildAppBar(BuildContext context, AppProvider provider) {
-    return Container(
-      padding: const EdgeInsets.only(top: 45, left: 20, right: 20, bottom: 0),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -263,7 +236,7 @@ class DashboardHome extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.only(bottom: 10, top: 20),
       child: Row(
         children: [
           StatCard(
@@ -388,6 +361,19 @@ class HouseholdsMapPage extends StatefulWidget {
 
 class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
   final MapController _mapController = MapController();
+  String _mapType = 'y'; // Default: Hybrid (y), Normal (m), Satellite (s)
+
+  void _toggleMapType() {
+    setState(() {
+      if (_mapType == 'y') {
+        _mapType = 'm';
+      } else if (_mapType == 'm') {
+        _mapType = 's';
+      } else {
+        _mapType = 'y';
+      }
+    });
+  }
 
   Future<void> _goToMyLocation() async {
     bool serviceEnabled;
@@ -463,7 +449,7 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
                 children: [
                   TileLayer(
                     urlTemplate:
-                        'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
+                        'https://mt1.google.com/vt/lyrs=$_mapType&hl=uz&x={x}&y={y}&z={z}',
                     userAgentPackageName: 'com.example.demoproject',
                     maxZoom: 20,
                   ),
@@ -491,7 +477,7 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
                           width: 45,
                           height: 45,
                           child: GestureDetector(
-                            onTap: () => _showInfo(context, h),
+                            onTap: () => showHouseholdInfoSheet(context, h),
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
@@ -579,131 +565,39 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
           ),
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 90),
-            child: FloatingActionButton.extended(
-              onPressed: _goToMyLocation,
-              backgroundColor: Colors.white,
-              elevation: 4,
-              icon: const Icon(Icons.my_location, color: AppColors.primary),
-              label: const Text(
-                'Yaqin hudud',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showInfo(BuildContext context, HouseholdModel h) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Icon(Icons.home_work, color: AppColors.primary, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    h.officialAddress,
-                    style: const TextStyle(
-                      fontSize: 20,
+                FloatingActionButton.small(
+                  heroTag: 'map_type_btn',
+                  onPressed: _toggleMapType,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    _mapType == 'm' ? Icons.layers_outlined : Icons.layers,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'my_location_btn',
+                  onPressed: _goToMyLocation,
+                  backgroundColor: Colors.white,
+                  elevation: 4,
+                  icon: const Icon(Icons.my_location, color: AppColors.primary),
+                  label: const Text(
+                    'Yaqin hudud',
+                    style: TextStyle(
+                      color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 32),
-            const Text(
-              'Oila a\'zolari:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: h.residents.length,
-                separatorBuilder: (c, i) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final res = h.residents[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      child: Icon(
-                        res.gender == 'FEMALE' ? Icons.woman : Icons.man,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    title: Text(
-                      res.displayFullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      index == 0 ? 'Oila boshlig\'i' : 'Oila a\'zosi',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: null,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  'Yopish',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

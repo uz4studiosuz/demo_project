@@ -18,6 +18,11 @@ class HouseholdModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   
+  final String? tumanName;
+  final String? qfyName;
+  final String? mfyName;
+  final String? streetName;
+  
   // Relations
   List<ResidentModel> residents;
 
@@ -39,6 +44,10 @@ class HouseholdModel {
     required this.createdAt,
     required this.updatedAt,
     this.residents = const [],
+    this.tumanName,
+    this.qfyName,
+    this.mfyName,
+    this.streetName,
   });
 
   factory HouseholdModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +71,10 @@ class HouseholdModel {
       residents: json['residents'] != null 
           ? (json['residents'] as List).map((x) => ResidentModel.fromJson(x)).toList()
           : [],
+      tumanName: json['tuman_name'],
+      qfyName: json['qfy_name'],
+      mfyName: json['mfy_name'],
+      streetName: json['street_name'],
     );
   }
 
@@ -84,6 +97,10 @@ class HouseholdModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'residents': residents.map((r) => r.toJson()).toList(),
+      if (tumanName != null) 'tuman_name': tumanName,
+      if (qfyName != null) 'qfy_name': qfyName,
+      if (mfyName != null) 'mfy_name': mfyName,
+      if (streetName != null) 'street_name': streetName,
     };
   }
 }

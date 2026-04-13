@@ -8,8 +8,8 @@ import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
 import '../../theme/colors.dart';
 import '../../widgets/section_box.dart';
-import 'full_screen_map_picker.dart';
-import '../../additional/map_border.dart';
+import 'widgets/map_preview_picker.dart';
+import 'widgets/location_picker_section.dart';
 
 class AddFamilyPage extends StatefulWidget {
   const AddFamilyPage({super.key});
@@ -26,6 +26,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   final _mainLastNameController = TextEditingController();
   final _mainPhoneController = TextEditingController();
   final _familyCountController = TextEditingController(text: '1');
+
+  String? _selectedTuman;
+  String? _selectedQfy;
+  String? _selectedMfy;
+  String? _selectedStreet;
+  String _officialAddress = '';
+
+  bool _hasAdditionalMembers = false;
 
   String _mainGender = 'MALE';
 
@@ -60,6 +68,23 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   }
 
   void _onFamilyCountChanged() {
+    if (!_hasAdditionalMembers) {
+      if (_memberFirstNameControllers.isNotEmpty) {
+        setState(() {
+          for (int i = 0; i < _memberFirstNameControllers.length; i++) {
+            _memberFirstNameControllers[i].dispose();
+            _memberLastNameControllers[i].dispose();
+          }
+          _memberFirstNameControllers.clear();
+          _memberLastNameControllers.clear();
+          _memberGenders.clear();
+          _memberRoles.clear();
+          _familyCountController.text = '1';
+        });
+      }
+      return;
+    }
+
     final text = _familyCountController.text;
     if (text.isEmpty) return;
 
@@ -96,41 +121,6 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')),
-          );
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _centerPosition = LatLng(position.latitude, position.longitude);
-        _mapController.move(_centerPosition, 16);
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
-    }
-  }
-
   @override
   void dispose() {
     _addressController.dispose();
@@ -144,25 +134,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     for (var c in _memberLastNameControllers) {
       c.dispose();
     }
-    _mapController.dispose();
     super.dispose();
-  }
-
-  void _openFullScreenMap() async {
-    final LatLng? result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            FullScreenMapPicker(initialPosition: _centerPosition),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _centerPosition = result;
-        _mapController.move(_centerPosition, 16);
-      });
-    }
   }
 
   Future<void> _submitForm() async {
@@ -174,7 +146,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         regionId: 1,
         districtId: 1,
         createdByAgentId: provider.currentUser?.id ?? 0,
-        officialAddress: _addressController.text,
+        officialAddress: _officialAddress,
+        tumanName: _selectedTuman,
+        qfyName: _selectedQfy,
+        mfyName: _selectedMfy,
+        streetName: _selectedStreet,
         latitude: _centerPosition.latitude,
         longitude: _centerPosition.longitude,
         createdAt: DateTime.now(),
@@ -264,35 +240,21 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           title: 'Moddiy Joylashuv',
                           icon: Icons.location_on_outlined,
                           children: [
-                            TextFormField(
-                              controller: _addressController,
-                              decoration: const InputDecoration(
-                                labelText: 'Xonadon manzili',
-                                prefixIcon: Icon(Icons.home_outlined),
-                              ),
-                              validator: (val) =>
-                                  val!.isEmpty ? 'Manzil majburiy' : null,
+                            LocationPickerSection(
+                              onAddressChanged:
+                                  (tuman, qfy, mfy, street, address) {
+                                    _selectedTuman = tuman;
+                                    _selectedQfy = qfy;
+                                    _selectedMfy = mfy;
+                                    _selectedStreet = street;
+                                    _officialAddress = address;
+                                  },
                             ),
                             const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Xaritadagi joy',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textMain,
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: _openFullScreenMap,
-                                  icon: const Icon(Icons.fullscreen, size: 20),
-                                  label: const Text('To\'liq ekran'),
-                                ),
-                              ],
+                            MapPreviewPicker(
+                              initialPosition: _centerPosition,
+                              onPositionChanged: (pos) => _centerPosition = pos,
                             ),
-                            const SizedBox(height: 8),
-                            _buildMapWidget(),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -374,130 +336,167 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           title: 'Qo\'shimcha Oila A\'zolari',
                           icon: Icons.group_outlined,
                           children: [
-                            TextFormField(
-                              controller: _familyCountController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Umumiy a\'zolar soni',
-                                prefixIcon: Icon(Icons.family_restroom),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            ...List.generate(_memberFirstNameControllers.length, (
-                              index,
-                            ) {
-                              return Container(
-                                key: ValueKey(
-                                  'member_$index',
-                                ), // Stabil identifikator
-                                margin: const EdgeInsets.only(top: 16),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.grey.withValues(alpha: 0.1),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Qo\'shimcha oila a\'zolari mavjudmi?',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.02,
-                                      ),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${index + 1}-Oila a\'zosi',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                        fontSize: 13,
-                                      ),
+                                Switch(
+                                  value: _hasAdditionalMembers,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _hasAdditionalMembers = val;
+                                      if (!val) {
+                                        _familyCountController.text = '1';
+                                      } else {
+                                        _familyCountController.text =
+                                            '2'; // At least 2 if additional members exist
+                                      }
+                                      _onFamilyCountChanged();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (_hasAdditionalMembers) ...[
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _familyCountController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText:
+                                      'Umumiy a\'zolar soni (Siz bilan birga)',
+                                  prefixIcon: Icon(Icons.family_restroom),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              ...List.generate(_memberFirstNameControllers.length, (
+                                index,
+                              ) {
+                                return Container(
+                                  key: ValueKey(
+                                    'member_$index',
+                                  ), // Stabil identifikator
+                                  margin: const EdgeInsets.only(top: 16),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.grey.withValues(alpha: 0.1),
                                     ),
-                                    const SizedBox(height: 16),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller:
-                                                _memberLastNameControllers[index],
-                                            decoration: const InputDecoration(
-                                              labelText: 'Familiyasi',
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.02,
+                                        ),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${index + 1}-Oila a\'zosi',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextFormField(
+                                              controller:
+                                                  _memberLastNameControllers[index],
+                                              decoration: const InputDecoration(
+                                                labelText: 'Familiyasi',
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller:
-                                                _memberFirstNameControllers[index],
-                                            decoration: const InputDecoration(
-                                              labelText: 'Ismi',
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: TextFormField(
+                                              controller:
+                                                  _memberFirstNameControllers[index],
+                                              decoration: const InputDecoration(
+                                                labelText: 'Ismi',
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child:
-                                              DropdownButtonFormField<String>(
-                                                initialValue:
-                                                    _memberGenders[index],
-                                                decoration:
-                                                    const InputDecoration(
-                                                      labelText: 'Jinsi',
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                                  initialValue:
+                                                      _memberGenders[index],
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText: 'Jinsi',
+                                                      ),
+                                                  items: const [
+                                                    DropdownMenuItem(
+                                                      value: 'MALE',
+                                                      child: Text('Erkak'),
                                                     ),
-                                                items: const [
-                                                  DropdownMenuItem(
-                                                    value: 'MALE',
-                                                    child: Text('Erkak'),
-                                                  ),
-                                                  DropdownMenuItem(
-                                                    value: 'FEMALE',
-                                                    child: Text('Ayol'),
-                                                  ),
-                                                ],
-                                                onChanged: (val) => setState(
-                                                  () => _memberGenders[index] =
-                                                      val!,
-                                                ),
-                                              ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child:
-                                              DropdownButtonFormField<String>(
-                                                initialValue:
-                                                    _memberRoles[index],
-                                                decoration:
-                                                    const InputDecoration(
-                                                      labelText: 'Oila ro\'li',
+                                                    DropdownMenuItem(
+                                                      value: 'FEMALE',
+                                                      child: Text('Ayol'),
                                                     ),
-                                                items: _roleOptions.map((role) {
-                                                  return DropdownMenuItem(
-                                                    value: role,
-                                                    child: Text(role),
-                                                  );
-                                                }).toList(),
-                                                onChanged: (val) => setState(
-                                                  () => _memberRoles[index] =
-                                                      val!,
+                                                  ],
+                                                  onChanged: (val) => setState(
+                                                    () =>
+                                                        _memberGenders[index] =
+                                                            val!,
+                                                  ),
                                                 ),
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                                  initialValue:
+                                                      _memberRoles[index],
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText:
+                                                            'Oila ro\'li',
+                                                      ),
+                                                  items: _roleOptions.map((
+                                                    role,
+                                                  ) {
+                                                    return DropdownMenuItem(
+                                                      value: role,
+                                                      child: Text(role),
+                                                    );
+                                                  }).toList(),
+                                                  onChanged: (val) => setState(
+                                                    () => _memberRoles[index] =
+                                                        val!,
+                                                  ),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 32),
@@ -521,80 +520,6 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _buildMapWidget() {
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _centerPosition,
-                initialZoom: 14.0,
-                minZoom: 5,
-                maxZoom: 18,
-                onPositionChanged: (position, hasGesture) {
-                  constrainMap(position, _mapController);
-                  if (hasGesture) _centerPosition = position.center;
-                },
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                ),
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
-                  userAgentPackageName: 'com.example.demoproject',
-                  maxZoom: 20,
-                ),
-                if (kShowMapBorder)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: kFerganaBorder,
-                        color: Colors.redAccent,
-                        strokeWidth: 3,
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            const Center(
-              child: Icon(
-                Icons.location_pin,
-                size: 30,
-                color: AppColors.danger,
-              ),
-            ),
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: FloatingActionButton.small(
-                heroTag: 'dashboard_location_btn',
-                onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-                backgroundColor: Colors.white,
-                child: _isLoadingLocation
-                    ? const SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.my_location, color: AppColors.primary),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

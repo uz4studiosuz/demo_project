@@ -3,8 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
-import '../../models/resident_model.dart';
 import '../../theme/colors.dart';
+import 'widgets/household_card.dart';
 
 class PatientListPage extends StatefulWidget {
   final bool isEmbedded;
@@ -49,6 +49,12 @@ class _PatientListPageState extends State<PatientListPage> {
     if (_filterType == 'multi_resident') {
       households = households.where((h) => h.residents.length > 2).toList();
     }
+
+    // Clear grouped data as we're switching back to a flat list
+    // Map<String, Map<String, List<HouseholdModel>>> groupedData = {};
+    // if (_searchQuery.isEmpty) {
+    //   ...
+    // }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -128,9 +134,8 @@ class _PatientListPageState extends State<PatientListPage> {
                         ),
                         itemCount: households.length,
                         itemBuilder: (context, index) {
-                          return _buildHouseholdCard(
-                            context,
-                            households[index],
+                          return HouseholdCard(
+                            household: households[index],
                           );
                         },
                       ),
@@ -190,122 +195,6 @@ class _PatientListPageState extends State<PatientListPage> {
             'Hech narsa topilmadi',
             style: TextStyle(fontSize: 16, color: Colors.grey[500]),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHouseholdCard(BuildContext context, HouseholdModel household) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.all(16),
-          leading: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.location_city, color: AppColors.primary),
-          ),
-          title: Text(
-            household.officialAddress.isEmpty
-                ? 'Manzilsiz Xonadon'
-                : household.officialAddress,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: AppColors.textMain,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.people,
-                  size: 16,
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${household.residents.length} kishi',
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          childrenPadding: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: 16,
-          ),
-          children: household.residents
-              .map((resident) => _buildResidentItem(resident))
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResidentItem(ResidentModel resident) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: Colors.white,
-            radius: 18,
-            child: Icon(
-              resident.gender == 'FEMALE' ? Icons.woman : Icons.man,
-              size: 20,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  resident.displayFullName.isEmpty
-                      ? 'Noma\'lum shaxs'
-                      : resident.displayFullName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMain,
-                  ),
-                ),
-                Text(
-                  resident.role ?? 'Oila a\'zosi',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
         ],
       ),
     );
