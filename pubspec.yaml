@@ -50,6 +50,7 @@ dependencies:
   flutter_blurhash: ^0.9.1
   http: ^1.6.0
   shared_preferences: ^2.5.5
+  liquid_glass_bar: ^0.1.0
 
 dev_dependencies:
   flutter_test:

@@ -104,22 +104,31 @@ class _LoginPageState extends State<LoginPage> {
     final provider = Provider.of<LocaleProvider>(context);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          const LiquidBackground(),
+          // Navy Header Background
+          Container(
+            height: MediaQuery.of(context).size.height * 0.4,
+            decoration: const BoxDecoration(
+              color: AppColors.govNavy,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(60),
+                bottomRight: Radius.circular(60),
+              ),
+            ),
+          ),
 
           // Search Language Button
           Positioned(
             top: 50,
             right: 20,
             child: TextButton.icon(
-              onPressed: () {
-                _showLanguageSelector(context);
-              },
+              onPressed: () => _showLanguageSelector(context),
               icon: const Icon(
                 Icons.language_rounded,
                 color: Colors.white,
-                size: 20,
+                size: 18,
               ),
               label: Text(
                 provider.locale.languageCode == 'en'
@@ -129,216 +138,301 @@ class _LoginPageState extends State<LoginPage> {
                     : 'Русский',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.normal,
                 ),
               ),
               style: TextButton.styleFrom(
-                backgroundColor: AppColors.glassBackground,
+                backgroundColor: Colors.white.withValues(alpha: 0.1),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
               ),
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 150, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.hello,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.secure,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    height: 1.5,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Login Form Container
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.62,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.signin,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                        color: AppColors.textMain,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Email Field
-                    TextFormField(
-                      controller: _emailController,
-                      style: const TextStyle(fontSize: 15),
-                      decoration: const InputDecoration(
-                        hintText: 'Foydalanuvchi nomi',
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Icon(TablerIcons.user, size: 22),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60),
+                  // Emblem / Logo
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
+                    child: const Icon(
+                      Icons.account_balance_rounded,
+                      size: 50,
+                      color: AppColors.govNavy,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'PORTALGA KIRISH',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const Text(
+                    'O\'ZBEKISTON RESPUBLIKASI',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 1.5,
+                      color: Colors.white70,
+                    ),
+                  ),
 
-                    // Password Field
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      style: const TextStyle(fontSize: 15),
-                      decoration: const InputDecoration(
-                        hintText: 'Parol',
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Icon(TablerIcons.lock_password, size: 22),
+                  const SizedBox(height: 50),
+
+                  // Login Card
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
                         ),
-                      ),
+                      ],
+                      border: Border.all(color: Colors.grey.shade100),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Remember Me & Forgot Password
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const Text(
+                          'Tizimga kirish',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.govNavy,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Form Fields
+                        _buildFormField(
+                          controller: _emailController,
+                          label: 'Foydalanuvchi nomi',
+                          icon: Icons.person_outline_rounded,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildFormField(
+                          controller: _passwordController,
+                          label: 'Parol',
+                          icon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                        ),
+
+                        const SizedBox(height: 16),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Checkbox(
-                              value: _rememberMe,
-                              onChanged: (value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
-                              },
+                            Row(
+                              children: [
+                                SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    activeColor: AppColors.govNavy,
+                                    onChanged: (v) =>
+                                        setState(() => _rememberMe = v!),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Eslab qolish',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              l10n.remember,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
+                            TextButton(
+                              onPressed: () {},
+                              child: const Text(
+                                'Parolni unutdingizmi?',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.govNavy,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        TextButton(
-                          onPressed: () {},
-                          child: Text(
-                            l10n.forgot,
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
+
+                        const SizedBox(height: 32),
+
+                        // Login Button
+                        Consumer<AppProvider>(
+                          builder: (context, provider, child) {
+                            return ElevatedButton(
+                              onPressed: provider.isLoading
+                                  ? null
+                                  : () async {
+                                      bool success = await provider.login(
+                                        _emailController.text,
+                                        _passwordController.text,
+                                      );
+
+                                      if (!context.mounted) return;
+
+                                      if (success) {
+                                        _navigateToDashboard(provider);
+                                      } else {
+                                        _showError(context);
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.govNavy,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 55),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: provider.isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'KIRISH',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                            );
+                          },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                  ),
 
-                    Consumer<AppProvider>(
-                      builder: (context, provider, child) {
-                        return ElevatedButton(
-                          onPressed: provider.isLoading
-                              ? null
-                              : () async {
-                                  bool success = await provider.login(
-                                    _emailController.text,
-                                    _passwordController.text,
-                                  );
-
-                                  if (!context.mounted) return;
-
-                                  if (success) {
-                                    if (provider.currentUserRole ==
-                                        UserRole.surveyor) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const SurveyorDashboard(),
-                                        ),
-                                      );
-                                    } else if (provider.currentUserRole ==
-                                        UserRole.driver) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const DriverDashboard(),
-                                        ),
-                                      );
-                                    }
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Login yoki parol xato.'),
-                                      ),
-                                    );
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 55),
-                          ),
-                          child: provider.isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : Text(l10n.signin),
-                        );
-                      },
+                  const SizedBox(height: 40),
+                  // Footer
+                  const Opacity(
+                    opacity: 0.5,
+                    child: Text(
+                      'Monitoring va Hatlov Tizimi\n© 2026 O\'zbekiston Respublikasi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, size: 20, color: AppColors.govNavy),
+            fillColor: Colors.grey.shade50,
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.govNavy,
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToDashboard(AppProvider provider) {
+    Widget next;
+    if (provider.currentUserRole == UserRole.surveyor) {
+      next = const SurveyorDashboard();
+    } else {
+      next = const DriverDashboard();
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => next),
+    );
+  }
+
+  void _showError(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login yoki parol xato.'),
+        backgroundColor: Colors.redAccent,
       ),
     );
   }

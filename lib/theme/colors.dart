@@ -22,4 +22,8 @@ class AppColors {
   
   static const Color glassBackground = Color(0x33FFFFFF);
   static const Color glassBorder = Color(0x4DFFFFFF);
+
+  // Government Style
+  static const Color govNavy = Color(0xFF003366);
+  static const Color govGold = Color(0xFFC5A059);
 }

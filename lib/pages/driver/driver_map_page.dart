@@ -542,8 +542,23 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
               backgroundColor: AppColors.surface,
               elevation: 0,
             ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+      body: (_isLoading || (_isRouteLoading && _routePoints.isEmpty))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(color: AppColors.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isLoading ? 'GPS qidirilmoqda...' : 'Marshrut hisoblanmoqda...',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            )
           : Stack(
               children: [
                 // ─── MAP ─────────────────────────────────────────

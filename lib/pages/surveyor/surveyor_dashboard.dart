@@ -1,21 +1,25 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 import 'package:provider/provider.dart';
-import '../../providers/app_provider.dart';
+
+import '../../additional/map_border.dart';
 import '../../models/household_model.dart';
+import '../../providers/app_provider.dart';
 import '../../theme/colors.dart';
-import '../../widgets/stat_card.dart';
-import '../../widgets/household_card.dart';
+import '../../widgets/household_info_sheet.dart';
 import '../login.dart';
 import 'add_family_page.dart';
 import 'patient_list_page.dart';
-import '../../additional/map_border.dart';
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:geolocator/geolocator.dart';
-import '../../widgets/household_info_sheet.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SURVEYOR DASHBOARD  — Government UI, Driver stili bilan birxil
+// ═══════════════════════════════════════════════════════════════════════════
 
 class SurveyorDashboard extends StatefulWidget {
   const SurveyorDashboard({super.key});
@@ -27,13 +31,6 @@ class SurveyorDashboard extends StatefulWidget {
 class _SurveyorDashboardState extends State<SurveyorDashboard> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const DashboardHome(),
-    const PatientListPage(isEmbedded: true),
-    const HouseholdsMapPage(),
-    const ProfilePage(),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -44,396 +41,484 @@ class _SurveyorDashboardState extends State<SurveyorDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBody: true,
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _buildBottomNav(),
+    final pages = [
+      const _SurveyorHome(),
+      const PatientListPage(isEmbedded: true),
+      const _HouseholdsMapPage(),
+      const _ProfilePage(),
+    ];
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F6F8),
+        extendBody: true,
+        body: IndexedStack(index: _currentIndex, children: pages),
+        bottomNavigationBar: _buildBottomNav(),
+      ),
     );
   }
 
   Widget _buildBottomNav() {
-    return Container(
-      margin: const EdgeInsets.only(left: 24, right: 24, bottom: 30),
-      height: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(35),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(35),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  0,
-                  CupertinoIcons.square_grid_2x2,
-                  CupertinoIcons.square_grid_2x2_fill,
-                ),
-                _buildNavItem(
-                  1,
-                  CupertinoIcons.list_bullet,
-                  CupertinoIcons.list_bullet,
-                ),
-                _buildNavItem(2, CupertinoIcons.map, CupertinoIcons.map_fill),
-                _buildNavItem(
-                  3,
-                  CupertinoIcons.person,
-                  CupertinoIcons.person_fill,
-                ),
-              ],
-            ),
-          ),
+    return LiquidGlassBar(
+      currentIndex: _currentIndex,
+      onTap: (i) => setState(() => _currentIndex = i),
+      style: LiquidGlassBarStyle(
+        activeColor: AppColors.govNavy,
+        inactiveColor: const Color(0xFF9EA8B8),
+        borderRadius: 28,
+        height: 60,
+        iconSize: 24,
+        selectedIconScale: 1.2,
+        animationDuration: const Duration(milliseconds: 280),
+        animationCurve: Curves.easeOutCubic,
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+        liquidGlassSettings: LiquidGlassSettings(
+          blur: 18.0,
+          thickness: 18.0,
+          glassColor: Colors.white.withValues(alpha: 0.75),
+          lightIntensity: 0.5,
+          refractiveIndex: 1.4,
         ),
       ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon) {
-    bool isSelected = _currentIndex == index;
-    return InkWell(
-      onTap: () {
-        setState(() => _currentIndex = index);
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              size: 24,
-            ),
-          ),
-          if (isSelected)
-            Container(
-              margin: const EdgeInsets.only(top: 2),
-              height: 4,
-              width: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-        ],
-      ),
+      items: const [
+        LiquidGlassBarItem(iconData: Icons.grid_view_rounded,        label: 'Bosh sahifa'),
+        LiquidGlassBarItem(iconData: Icons.list_alt_rounded,         label: 'Ro\'yxat'),
+        LiquidGlassBarItem(iconData: Icons.map_outlined,             label: 'Xarita'),
+        LiquidGlassBarItem(iconData: Icons.person_outline_rounded,   label: 'Profil'),
+      ],
     );
   }
 }
 
-class DashboardHome extends StatelessWidget {
-  const DashboardHome({super.key});
+// ═══════════════════════════════════════════════════════════════════════════
+//  BOSH SAHIFA (Tab 0)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SurveyorHome extends StatelessWidget {
+  const _SurveyorHome();
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+      builder: (context, provider, _) {
+        final households = provider.households;
+        final totalResidents = households.fold<int>(
+            0, (s, h) => s + h.residents.length);
+
         return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            backgroundColor: AppColors.surface,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            automaticallyImplyLeading: false,
-            toolbarHeight: 100,
-            title: _buildAppBar(context, provider),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+          backgroundColor: const Color(0xFFF5F6F8),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildHeader(context, provider),
+                Expanded(
+                  child: provider.isLoading && households.isEmpty
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.govNavy))
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                          children: [
+                            const SizedBox(height: 16),
+                            // Stats row
+                            Row(
+                              children: [
+                                _statCard(
+                                  icon: Icons.home_work_outlined,
+                                  value: '${households.length}',
+                                  label: 'Xonadonlar',
+                                ),
+                                const SizedBox(width: 12),
+                                _statCard(
+                                  icon: Icons.people_outline_rounded,
+                                  value: '$totalResidents',
+                                  label: 'Aholi',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Quick action banner
+                            _buildAddBanner(context),
+                            const SizedBox(height: 24),
+
+                            // Recent section header
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Yaqinda qo\'shilganlar',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textMain,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PatientListPage()),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.govNavy),
+                                  child: const Text('Barchasi'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Recent cards
+                            ...households.reversed.take(10).map(
+                                  (h) => _HouseholdCard(
+                                    household: h,
+                                    onTap: () =>
+                                        showHouseholdInfoSheet(context, h),
+                                  ),
+                                ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ),
-          body: provider.isLoading && provider.households.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    _buildStatsBanner(provider),
-                    const SizedBox(height: 20),
-                    _buildQuickAction(context),
-                    const SizedBox(height: 25),
-                    _buildSectionHeader('Yaqinda qo\'shilganlar', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PatientListPage(),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 15),
-                    ...provider.households.reversed
-                        .take(10)
-                        .map(
-                          (h) => HouseholdCard(
-                            household: h,
-                            onTap: () => showHouseholdInfoSheet(context, h),
-                          ),
-                        ),
-                    const SizedBox(height: 120),
-                  ],
-                ),
         );
       },
     );
   }
 
-  Widget _buildAppBar(BuildContext context, AppProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
+  Widget _buildHeader(BuildContext context, AppProvider provider) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hayirli kun!',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Punkt №7',
-                style: TextStyle(
-                  color: AppColors.textMain,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.govNavy.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child:
+                const Icon(Icons.manage_accounts, color: AppColors.govNavy, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Xush kelibsiz',
+                    style: TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary)),
+                Text(
+                  provider.currentUser?.fullName ?? 'Hatlovchi',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.govNavy,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          // Add button in header
+          GestureDetector(
+            onTap: () => _openAddPage(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.govNavy,
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
+              child: const Icon(Icons.add, color: Colors.white, size: 22),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsBanner(AppProvider provider) {
-    int totalResidents = 0;
-    for (var h in provider.households) {
-      totalResidents += h.residents.length;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 20),
-      child: Row(
-        children: [
-          StatCard(
-            label: 'Xonadonlar',
-            value: provider.households.length.toString(),
-            icon: Icons.home_work_outlined,
-          ),
-          const SizedBox(width: 15),
-          StatCard(
-            label: 'Aholi soni',
-            value: totalResidents.toString(),
-            icon: Icons.people_outline,
-          ),
-        ],
+  Widget _statCard({
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3))
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.govNavy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.govNavy, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.govNavy)),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildQuickAction(BuildContext context) {
-    return InkWell(
+  Widget _buildAddBanner(BuildContext context) {
+    return GestureDetector(
       onTap: () => _openAddPage(context),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryDark],
+            colors: [Color(0xFF003366), Color(0xFF1A5C99)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 15,
+              color: AppColors.govNavy.withValues(alpha: 0.25),
+              blurRadius: 16,
               offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           children: [
-            const CircleAvatar(
-              backgroundColor: Colors.white24,
-              radius: 28,
-              child: Icon(
-                Icons.add_location_alt_outlined,
-                color: Colors.white,
-                size: 28,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.add_location_alt_outlined,
+                  color: Colors.white, size: 28),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 18),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Yangi xatlov',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('Yangi xatlov',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text(
-                    'Geolokatsiya va oila ma\'lumotlari',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
+                  Text('Geolokatsiya va oila ma\'lumotlari',
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withValues(alpha: 0.54),
-              size: 18,
-            ),
+            Icon(Icons.arrow_forward_ios,
+                color: Colors.white.withValues(alpha: 0.6), size: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textMain,
-          ),
-        ),
-        TextButton(
-          onPressed: onSeeAll,
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-          child: const Text('Barchasi'),
-        ),
-      ],
-    );
-  }
-
-  void _openAddPage(BuildContext context) async {
+  Future<void> _openAddPage(BuildContext context) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddFamilyPage()),
+      MaterialPageRoute(builder: (_) => const AddFamilyPage()),
     );
-    if (result == true) {
-      if (context.mounted) {
-        Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
-      }
+    if (result == true && context.mounted) {
+      Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
     }
   }
 }
 
-class HouseholdsMapPage extends StatefulWidget {
-  const HouseholdsMapPage({super.key});
+// ─── Household card (tekis, driver stilida) ───────────────────────────────
+class _HouseholdCard extends StatelessWidget {
+  final HouseholdModel household;
+  final VoidCallback onTap;
+
+  const _HouseholdCard({required this.household, required this.onTap});
 
   @override
-  State<HouseholdsMapPage> createState() => _HouseholdsMapPageState();
+  Widget build(BuildContext context) {
+    final h = household;
+    final houseNum = h.houseNumber != null && h.houseNumber!.isNotEmpty
+        ? '${h.houseNumber}-uy'
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.govNavy.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.home_work_outlined,
+                    color: AppColors.govNavy, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      houseNum ?? h.officialAddress,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textMain),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      [h.streetName, h.mfyName, h.tumanName]
+                          .where((e) => e != null && e.isNotEmpty)
+                          .join(' • '),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.govNavy.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${h.residents.length} nafar',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.govNavy,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
-  final MapController _mapController = MapController();
-  String _mapType = 'y'; // Default: Hybrid (y), Normal (m), Satellite (s)
+// ═══════════════════════════════════════════════════════════════════════════
+//  XARITA (Tab 2)
+// ═══════════════════════════════════════════════════════════════════════════
 
-  void _toggleMapType() {
-    setState(() {
-      if (_mapType == 'y') {
-        _mapType = 'm';
-      } else if (_mapType == 'm') {
-        _mapType = 's';
-      } else {
-        _mapType = 'y';
-      }
-    });
-  }
+class _HouseholdsMapPage extends StatefulWidget {
+  const _HouseholdsMapPage();
+
+  @override
+  State<_HouseholdsMapPage> createState() => _HouseholdsMapPageState();
+}
+
+class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
+  final MapController _mapController = MapController();
+  String _mapType = 'y';
+  bool _isLocationLoading = false;
+
+  void _toggleMapType() => setState(() {
+        _mapType = _mapType == 'y'
+            ? 'm'
+            : _mapType == 'm'
+                ? 's'
+                : 'y';
+      });
 
   Future<void> _goToMyLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Tekshiramiz: Joylashuv xizmati yoqilganmi?
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')),
-        );
-      }
-      return;
-    }
-
-    // Ruxsatlarni tekshiramiz
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+    setState(() => _isLocationLoading = true);
+    try {
+      final svc = await Geolocator.isLocationServiceEnabled();
+      if (!svc) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuvga ruxsat berilmadi')),
-          );
+              const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')));
         }
         return;
       }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Joylashuv ruxsati butunlay rad etilgan'),
-          ),
-        );
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
       }
-      return;
-    }
-
-    // Hozirgi joylashuvni olish
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      _mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Joylashuvga ruxsat berilmadi')));
+        }
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.best));
+      _mapController.move(LatLng(pos.latitude, pos.longitude), 15.0);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Joylashuvni aniqlashda xatolik: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Xatolik: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLocationLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+      builder: (context, provider, _) {
         final households = provider.households;
-
         return Scaffold(
           body: Stack(
             children: [
@@ -470,94 +555,85 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.all(50),
                       maxZoom: 15,
-                      markers: households.map((h) {
-                        // final hasHighRisk = h.residents.any((r) => r.isHighRiskMock);
-                        return Marker(
-                          point: LatLng(h.latitude, h.longitude),
-                          width: 45,
-                          height: 45,
-                          child: GestureDetector(
-                            onTap: () => showHouseholdInfoSheet(context, h),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  color: AppColors.primary,
-                                  size: 45,
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.only(bottom: 8),
-                                  child: Icon(
-                                    Icons.family_restroom,
-                                    color: Colors.white,
-                                    size: 16,
+                      markers: households
+                          .map((h) => Marker(
+                                point: LatLng(h.latitude, h.longitude),
+                                width: 45,
+                                height: 45,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      showHouseholdInfoSheet(context, h),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      const Icon(Icons.location_on,
+                                          color: AppColors.govNavy, size: 45),
+                                      const Padding(
+                                        padding: EdgeInsets.only(bottom: 8),
+                                        child: Icon(Icons.family_restroom,
+                                            color: Colors.white, size: 16),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      builder: (context, markers) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(25),
-                            color: AppColors.primary,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                blurRadius: 10,
-                              ),
-                            ],
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Center(
-                            child: Text(
-                              markers.length.toString(),
-                              style: const TextStyle(
+                              ))
+                          .toList(),
+                      builder: (context, markers) => Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          color: AppColors.govNavy,
+                          boxShadow: [
+                            BoxShadow(
+                                color: AppColors.govNavy.withValues(alpha: 0.3),
+                                blurRadius: 10)
+                          ],
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            markers.length.toString(),
+                            style: const TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                                fontWeight: FontWeight.bold),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
+              // Top info pill
               Positioned(
-                top: 60,
+                top: MediaQuery.of(context).padding.top + 12,
                 left: 20,
                 right: 20,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.6)),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.map, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Xaritada ${households.length} ta xonadon',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textMain,
-                        ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.map_outlined,
+                              color: AppColors.govNavy, size: 18),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Xaritada ${households.length} ta xonadon',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textMain),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -567,30 +643,32 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
             padding: const EdgeInsets.only(bottom: 90),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 FloatingActionButton.small(
-                  heroTag: 'map_type_btn',
+                  heroTag: 'map_type',
                   onPressed: _toggleMapType,
                   backgroundColor: Colors.white,
                   child: Icon(
-                    _mapType == 'm' ? Icons.layers_outlined : Icons.layers,
-                    color: AppColors.primary,
-                  ),
+                      _mapType == 'm' ? Icons.layers_outlined : Icons.layers,
+                      color: AppColors.govNavy),
                 ),
                 const SizedBox(height: 12),
                 FloatingActionButton.extended(
-                  heroTag: 'my_location_btn',
-                  onPressed: _goToMyLocation,
+                  heroTag: 'my_loc',
+                  onPressed: _isLocationLoading ? null : _goToMyLocation,
                   backgroundColor: Colors.white,
                   elevation: 4,
-                  icon: const Icon(Icons.my_location, color: AppColors.primary),
-                  label: const Text(
-                    'Yaqin hudud',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  icon: _isLocationLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.govNavy))
+                      : const Icon(Icons.my_location, color: AppColors.govNavy),
+                  label: Text(
+                    _isLocationLoading ? 'Aniqlanmoqda...' : 'Yaqin hudud',
+                    style: const TextStyle(
+                        color: AppColors.govNavy, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -602,57 +680,73 @@ class _HouseholdsMapPageState extends State<HouseholdsMapPage> {
   }
 }
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+// ═══════════════════════════════════════════════════════════════════════════
+//  PROFIL (Tab 3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ProfilePage extends StatelessWidget {
+  const _ProfilePage();
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
+    final name = provider.currentUser?.fullName ?? 'Hatlovchi';
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Profil')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.primaryLight,
-              child: Icon(Icons.person, size: 50, color: AppColors.primaryDark),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              provider.currentUser?.fullName ?? 'Hatlovchi App',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
-              ),
-            ),
-            const Spacer(),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+      backgroundColor: const Color(0xFFF5F6F8),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: AppColors.govNavy.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.manage_accounts,
+                      color: AppColors.govNavy, size: 44),
                 ),
-              ),
-              onPressed: () {
-                provider.logout();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                );
-              },
-              child: const Text(
-                'Tizimdan chiqish',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+                const SizedBox(height: 18),
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.govNavy)),
+                const SizedBox(height: 4),
+                const Text('Hatlovchi',
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 36),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      provider.logout();
+                      Navigator.pushReplacement(context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()));
+                    },
+                    icon: const Icon(Icons.logout, color: AppColors.danger),
+                    label: const Text('Tizimdan chiqish',
+                        style: TextStyle(
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.danger),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 100),
-          ],
+          ),
         ),
       ),
     );
