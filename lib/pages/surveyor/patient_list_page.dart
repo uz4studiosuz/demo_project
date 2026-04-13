@@ -642,12 +642,12 @@ class _PatientListPageState extends State<PatientListPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
+                    GestureDetector(
                     onTap: () async {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const AddFamilyPage()),
+                            builder: (_) => AddFamilyPage(existing: h)),
                       );
                       if (result == true && context.mounted) {
                         provider.fetchHouseholds();

@@ -112,6 +112,48 @@ class AppProvider extends ChangeNotifier {
     return false;
   }
 
+  // Update Household + replace all residents
+  Future<bool> updateHouseholdWithResidents(
+      HouseholdModel household, List<ResidentModel> residents) async {
+    _isLoading = true;
+    notifyListeners();
+
+    // 1. Update household address/location
+    final updated = await _apiService.updateHousehold(household);
+    if (updated == null) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+
+    // 2. Delete old residents
+    final oldResidents = List<int>.from(
+        updated.residents.map((r) => r.id));
+    for (final id in oldResidents) {
+      await _apiService.deleteResident(id);
+    }
+
+    // 3. Create new residents
+    for (final res in residents) {
+      await _apiService.createResident(ResidentModel(
+        id: 0,
+        householdId: updated.id,
+        firstName: res.firstName,
+        lastName: res.lastName,
+        phonePrimary: res.phonePrimary,
+        gender: res.gender,
+        role: res.role,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+    }
+
+    await fetchHouseholds();
+    _isLoading = false;
+    notifyListeners();
+    return true;
+  }
+
   // Delete Household
   Future<bool> deleteHousehold(int id) async {
     _isLoading = true;
