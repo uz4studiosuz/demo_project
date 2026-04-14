@@ -381,10 +381,16 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
   double _currentZoom = 13.0;
   HouseholdModel? _focusedHousehold;
   bool _mapReady = false; // Tile yuklanish holati
+  bool _isTransitioning = true; // Silliq o'tish uchun
 
   @override
   void initState() {
     super.initState();
+    // Sahifa o'tish animatsiyasi stutterni oldini olish uchun delay
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) setState(() => _isTransitioning = false);
+    });
+
     if (widget.focusHousehold != null) {
       _focusedHousehold = widget.focusHousehold;
       // Xarita ready bo'lgandan keyin fokus qilamiz
@@ -457,6 +463,38 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isTransitioning) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F6F8),
+        appBar: widget.focusHousehold != null 
+          ? AppBar(
+              backgroundColor: Colors.transparent, elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.govNavy),
+                onPressed: () => Navigator.pop(context),
+              ),
+            )
+          : null,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(color: AppColors.govNavy.withValues(alpha: 0.08), shape: BoxShape.circle),
+                child: const Icon(Icons.map_outlined, color: AppColors.govNavy, size: 28),
+              ),
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(color: AppColors.govNavy, strokeWidth: 3),
+              const SizedBox(height: 16),
+              const Text('Xarita tayyorlanmoqda...',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.govNavy)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         final households = provider.households;
@@ -758,15 +796,26 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
 
   // ── Ko'p qavatli bino sheet ───────────────────────────────────────
   void _showBuildingSheet(BuildContext context, List<HouseholdModel> apartments) {
+    // Qavatlar bo'yicha guruhlash
+    final floorsMap = <int, List<HouseholdModel>>{};
+    for (final apt in apartments) {
+      final f = apt.floor ?? 0; // null bo'lsa 0-qavat (Noma'lum)
+      floorsMap.putIfAbsent(f, () => []).add(apt);
+    }
+    // Eng yuqori qavat tepada turishi uchun kamayish tartibida sort
+    final sortedFloors = floorsMap.keys.toList()..sort((a, b) => b.compareTo(a));
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFF8F9FA), // Och kulrang orqa fon bino uchun
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 20),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,55 +827,136 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
             const SizedBox(height: 16),
             Row(children: [
               Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(color: const Color(0xFF37474F).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.apartment, color: Color(0xFF37474F), size: 22),
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF37474F), Color(0xFF263238)]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: const Icon(Icons.apartment, color: Colors.white, size: 24),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${apartments.first.buildingNumber ?? "?"}–bino',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)),
-                Text('${apartments.length} ta kvartira ro\'yxatda',
+                Text('${apartments.first.buildingNumber ?? "?"}–bino ko\'rinishi',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+                Text('Jami ${apartments.length} ta xonadon ro\'yxatga olingan',
                     style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               ])),
             ]),
             const SizedBox(height: 16),
             const Divider(height: 1),
-            const SizedBox(height: 12),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
-              child: ListView.separated(
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
                 shrinkWrap: true,
-                itemCount: apartments.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final apt = apartments[i];
-                  final head = apt.residents.isNotEmpty ? apt.residents.first : null;
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    leading: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(color: const Color(0xFF37474F).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                      child: Center(
-                        child: Text(
-                          apt.apartment ?? '?',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF37474F)),
-                        ),
+                itemCount: sortedFloors.length,
+                itemBuilder: (context, i) {
+                  final floor = sortedFloors[i];
+                  final apts = floorsMap[floor]!;
+                  
+                  // Xonadonlarni raqami bo'yicha o'sish tartibida sort qilish
+                  apts.sort((a, b) {
+                    final numA = int.tryParse(a.apartment ?? '') ?? 0;
+                    final numB = int.tryParse(b.apartment ?? '') ?? 0;
+                    return numA.compareTo(numB);
+                  });
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))
+                      ],
+                    ),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── Qavat ko'rsatkichi (chap tomonda) ──
+                          Container(
+                            width: 56,
+                            decoration: BoxDecoration(
+                              color: AppColors.govNavy.withValues(alpha: 0.05),
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                              border: Border(right: BorderSide(color: Colors.grey.shade100)),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  floor == 0 ? '?' : '$floor',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.govNavy),
+                                ),
+                                const Text('qavat', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          // ── Xonadonlar (o'ng tomonda) ──
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Column(
+                                children: apts.map((apt) {
+                                  final head = apt.residents.isNotEmpty ? apt.residents.first : null;
+                                  final hasHead = head != null;
+                                  
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      showHouseholdInfoSheet(context, apt);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 38, height: 38,
+                                            decoration: BoxDecoration(
+                                              color: hasHead ? const Color(0xFFF1F8E9) : const Color(0xFFF5F6F8),
+                                              border: Border.all(color: hasHead ? const Color(0xFFAED581).withValues(alpha: 0.5) : Colors.grey.shade300),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                apt.apartment ?? '?',
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, 
+                                                    color: hasHead ? const Color(0xFF33691E) : AppColors.textMain),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  hasHead ? '${head.lastName} ${head.firstName}' : 'Ma\'lumot kiritilmagan',
+                                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                                                      color: hasHead ? AppColors.textMain : AppColors.textSecondary),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  hasHead ? '${apt.residents.length} nafar aholi' : 'Bo\'sh xonadon',
+                                                  style: TextStyle(fontSize: 11, color: hasHead ? AppColors.textSecondary : Colors.grey.shade400),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    title: Text(
-                      head != null ? '${head.lastName} ${head.firstName}' : 'Ma\'lumot yo\'q',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '${apt.floor ?? "?"}–qavat • ${apt.residents.length} nafar',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                    ),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
-                    onTap: () {
-                      Navigator.pop(context);
-                      showHouseholdInfoSheet(context, apt);
-                    },
                   );
                 },
               ),

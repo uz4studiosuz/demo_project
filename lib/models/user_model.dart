@@ -41,7 +41,7 @@ class UserModel {
       phone: json['phone'],
       username: json['username'] ?? '',
       role: UserRole.values.firstWhere(
-        (e) => e.toString().contains(json['role'] ?? 'SURVEYOR'),
+        (e) => e.name.toUpperCase() == (json['role'] as String?)?.toUpperCase(),
         orElse: () => UserRole.surveyor,
       ),
       isActive: json['is_active'] ?? true,
