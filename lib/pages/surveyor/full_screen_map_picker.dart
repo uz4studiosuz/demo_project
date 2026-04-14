@@ -70,14 +70,6 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
       appBar: AppBar(
         title: const Text('Joylashuvni tanlang'),
         backgroundColor: AppColors.surface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check, color: AppColors.primary),
-            onPressed: () {
-              Navigator.pop(context, _currentPosition);
-            },
-          ),
-        ],
       ),
       body: Stack(
         children: [
@@ -125,6 +117,43 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                 border: Border.all(color: Colors.white, width: 2),
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          // Hint Card
+          Positioned(
+            top: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.primary, size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Haritani maksimal yaqinlashtirib, o\'rtadagi qizil nuqtani xonadon ustiga aniq olib keling va joylashuvni tasdiqlang. (Xonadon manzili aniq belgilanganiga ishonch hosil qiling)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textMain,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

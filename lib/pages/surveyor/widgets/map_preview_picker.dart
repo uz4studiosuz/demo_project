@@ -46,7 +46,6 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
     super.dispose();
   }
 
-
   Future<void> _openFullScreenMap() async {
     final LatLng? result = await Navigator.push(
       context,
@@ -135,21 +134,15 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                   behavior: HitTestBehavior.opaque,
                   child: Container(color: Colors.transparent),
                 ),
-                const Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(
-                        CupertinoIcons.pin_fill,
-                        size: 38,
-                        color: Colors.white,
-                      ),
-                      Icon(
-                        CupertinoIcons.pin_fill,
-                        size: 35,
-                        color: AppColors.danger,
-                      ),
-                    ],
+                Center(
+                  child: Container(
+                    width: 15,
+                    height: 15,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 2),
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
                 ),
               ],
