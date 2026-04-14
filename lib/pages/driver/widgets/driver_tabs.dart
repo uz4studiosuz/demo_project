@@ -7,7 +7,7 @@ import '../../../models/household_model.dart';
 import '../../../models/resident_model.dart';
 import '../../login.dart';
 import 'nav_optionsheet.dart';
-import 'household_setailsheet.dart';
+import '../../../widgets/household_info_sheet.dart';
 import '../driver_search_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -144,17 +144,10 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
   }
 
   void _openDetails(HouseholdModel h) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => HouseholdDetailSheet(
-        household: h,
-        onNavigate: (r) {
-          Navigator.pop(context);
-          _openNav(h, r: r);
-        },
-      ),
+    showHouseholdInfoSheet(
+      context,
+      h,
+      onGetDirections: () => _openNav(h),
     );
   }
 

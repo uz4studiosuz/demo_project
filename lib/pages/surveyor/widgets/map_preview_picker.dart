@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../../theme/colors.dart';
 import '../../../additional/map_border.dart';
 import '../full_screen_map_picker.dart';
@@ -24,7 +23,6 @@ class MapPreviewPicker extends StatefulWidget {
 class _MapPreviewPickerState extends State<MapPreviewPicker> {
   late final MapController _mapController;
   late LatLng _currentPosition;
-  bool _isLoadingLocation = false;
 
   @override
   void initState() {
@@ -48,41 +46,6 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
     super.dispose();
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuv xizmati o\'chirilgan')),
-          );
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
-        _mapController.move(_currentPosition, 16);
-      });
-      widget.onPositionChanged(_currentPosition);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
-    }
-  }
 
   Future<void> _openFullScreenMap() async {
     final LatLng? result = await Navigator.push(
@@ -173,29 +136,20 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                   child: Container(color: Colors.transparent),
                 ),
                 const Center(
-                  child: Icon(
-                    CupertinoIcons.pin_fill,
-                    size: 35,
-                    color: AppColors.danger,
-                  ),
-                ),
-                Positioned(
-                  right: 8,
-                  bottom: 8,
-                  child: FloatingActionButton.small(
-                    heroTag: 'dashboard_location_btn',
-                    onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-                    backgroundColor: Colors.white,
-                    child: _isLoadingLocation
-                        ? const SizedBox(
-                            width: 15,
-                            height: 15,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(
-                            Icons.my_location,
-                            color: AppColors.primary,
-                          ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.pin_fill,
+                        size: 38,
+                        color: Colors.white,
+                      ),
+                      Icon(
+                        CupertinoIcons.pin_fill,
+                        size: 35,
+                        color: AppColors.danger,
+                      ),
+                    ],
                   ),
                 ),
               ],

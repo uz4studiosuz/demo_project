@@ -83,8 +83,8 @@ class SurveyorHomeTab extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            // Maks 10 ta — reversed tartibda (eng yangi birinchi)
-                            ...households.reversed.take(10).map(
+                            // Maks 10 ta
+                            ...households.take(10).map(
                                   (h) => HouseholdListCard(
                                     household: h,
                                     onTap: () => showHouseholdInfoSheet(context, h),

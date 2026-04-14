@@ -63,26 +63,17 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
 
     if (widget.focusHousehold != null) {
       _focusedHousehold = widget.focusHousehold;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(
-          LatLng(
-            widget.focusHousehold!.latitude,
-            widget.focusHousehold!.longitude,
-          ),
-          17.0,
-        );
-        setState(() => _currentZoom = 17.0);
-      });
+      _currentZoom = 17.0;
     }
   }
 
   void _toggleMapType() => setState(() {
-    _mapType = _mapType == 'y'
-        ? 'm'
-        : _mapType == 'm'
-        ? 's'
-        : 'y';
-  });
+        _mapType = _mapType == 'y'
+            ? 'm'
+            : _mapType == 'm'
+                ? 's'
+                : 'y';
+      });
 
   Future<void> _goToMyLocation() async {
     setState(() => _isLocationLoading = true);
@@ -222,7 +213,12 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: const LatLng(40.3864, 71.7825),
+                  initialCenter: _focusedHousehold != null
+                      ? LatLng(
+                          _focusedHousehold!.latitude,
+                          _focusedHousehold!.longitude,
+                        )
+                      : const LatLng(40.3864, 71.7825),
                   initialZoom: _currentZoom,
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,

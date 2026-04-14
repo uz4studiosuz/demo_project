@@ -49,6 +49,19 @@ class _LocationPickerSectionState extends State<LocationPickerSection> {
     _selectedStreet = widget.initialStreet;
   }
 
+  @override
+  void didUpdateWidget(LocationPickerSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTuman != oldWidget.initialTuman ||
+        widget.initialMfy != oldWidget.initialMfy ||
+        widget.initialStreet != oldWidget.initialStreet) {
+      // Faqatgina bo'sh bo'lsa yangilaymiz (agar user uzgartirmagan bolsa)
+      if (_selectedTuman == oldWidget.initialTuman) _selectedTuman = widget.initialTuman;
+      if (_selectedMfy == oldWidget.initialMfy) _selectedMfy = widget.initialMfy;
+      if (_selectedStreet == oldWidget.initialStreet) _selectedStreet = widget.initialStreet;
+    }
+  }
+
   bool get _isCity => _selectedTuman != null && LocationData.isCity(_selectedTuman!);
 
   List<String> get _availableMfys =>

@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/colors.dart';
 import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
+import '../../utils/names_data.dart';
 import 'widgets/step0_location_step.dart';
 import 'widgets/step1_head_step.dart';
 import 'widgets/step2_members_step.dart';
+import 'widgets/step3_preview_step.dart';
 import 'full_screen_map_picker.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,6 +37,7 @@ class _Member {
   bool showPhone;
   String gender;
   String role;
+  DateTime? birthDate;
 
   _Member({
     String firstName = '',
@@ -42,13 +46,12 @@ class _Member {
     String phone = '',
     this.gender = 'MALE',
     this.role = 'Turmush o\'rtog\'i',
+    this.birthDate,
   }) : showPhone = phone.isNotEmpty && phone != '+998 ',
        firstCtrl = TextEditingController(text: firstName),
        lastCtrl = TextEditingController(text: lastName),
        middleCtrl = TextEditingController(text: middleName),
-       phoneCtrl = TextEditingController(
-         text: phone.isEmpty ? '+998 ' : phone,
-       );
+       phoneCtrl = TextEditingController(text: phone.isEmpty ? '+998 ' : phone);
 
   void dispose() {
     firstCtrl.dispose();
@@ -84,6 +87,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   final _headMiddleCtrl = TextEditingController();
   final _headPhoneCtrl = TextEditingController(text: '+998 ');
   String _headGender = 'MALE';
+  DateTime? _headBirthDate;
 
   // ── Qo'shimcha a'zolar ───────────────────────────────────────────
   final List<_Member> _members = [];
@@ -104,10 +108,51 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
   bool _saving = false;
 
+  List<String> _cachedFirstNames = [];
+  List<String> _cachedLastNames = [];
+  List<String> _cachedMiddleNames = [];
+
   @override
   void initState() {
     super.initState();
     _prefill();
+    if (!_isEdit) {
+      _loadTemplates();
+    }
+  }
+
+  Future<void> _loadTemplates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) {
+        setState(() {
+          _propertyType = prefs.getString('tpl_property') ?? kHouse;
+          _tuman = prefs.getString('tpl_tuman') ?? _tuman;
+          _qfy = prefs.getString('tpl_qfy') ?? _qfy;
+          _mfy = prefs.getString('tpl_mfy') ?? _mfy;
+          _street = prefs.getString('tpl_street') ?? _street;
+          _position = LatLng(
+            prefs.getDouble('tpl_lat') ?? _position.latitude,
+            prefs.getDouble('tpl_lng') ?? _position.longitude,
+          );
+          final loadedFirst = prefs.getStringList('tpl_first') ?? [];
+          final loadedLast = prefs.getStringList('tpl_last') ?? [];
+          final loadedMiddle = prefs.getStringList('tpl_middle') ?? [];
+          _cachedFirstNames = {
+            ...NamesData.defaultFirstNames,
+            ...loadedFirst,
+          }.toList();
+          _cachedLastNames = {
+            ...NamesData.defaultLastNames,
+            ...loadedLast,
+          }.toList();
+          _cachedMiddleNames = {
+            ...NamesData.defaultMiddleNames,
+            ...loadedMiddle,
+          }.toList();
+        });
+      }
+    } catch (_) {}
   }
 
   void _prefill() {
@@ -144,6 +189,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           ? '+998 '
           : head.phonePrimary!;
       _headGender = head.gender;
+      _headBirthDate = head.birthDate;
     }
 
     for (int i = 1; i < residents.length; i++) {
@@ -156,6 +202,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           phone: r.phonePrimary ?? '',
           gender: r.gender,
           role: r.role ?? 'Boshqa',
+          birthDate: r.birthDate,
         ),
       );
     }
@@ -207,9 +254,15 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       qfyName: _qfy,
       mfyName: _mfy,
       streetName: _street,
-      houseNumber: _houseCtrl.text.trim().isEmpty ? null : _houseCtrl.text.trim(),
-      buildingNumber: _buildingCtrl.text.trim().isEmpty ? null : _buildingCtrl.text.trim(),
-      apartment: _apartmentCtrl.text.trim().isEmpty ? null : _apartmentCtrl.text.trim(),
+      houseNumber: _houseCtrl.text.trim().isEmpty
+          ? null
+          : _houseCtrl.text.trim(),
+      buildingNumber: _buildingCtrl.text.trim().isEmpty
+          ? null
+          : _buildingCtrl.text.trim(),
+      apartment: _apartmentCtrl.text.trim().isEmpty
+          ? null
+          : _apartmentCtrl.text.trim(),
       floor: int.tryParse(_floorCtrl.text.trim()),
       latitude: _position.latitude,
       longitude: _position.longitude,
@@ -233,6 +286,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
             : _headPhoneCtrl.text.trim(),
         gender: _headGender,
         role: 'Oila boshlig\'i',
+        birthDate: _headBirthDate,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -252,6 +306,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                   : m.phoneCtrl.text.trim(),
               gender: m.gender,
               role: m.role,
+              birthDate: m.birthDate,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             ),
@@ -268,6 +323,34 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     if (mounted) {
       setState(() => _saving = false);
       if (ok) {
+        if (!_isEdit) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('tpl_property', _propertyType);
+            if (_tuman != null) await prefs.setString('tpl_tuman', _tuman!);
+            if (_qfy != null) await prefs.setString('tpl_qfy', _qfy!);
+            if (_mfy != null) await prefs.setString('tpl_mfy', _mfy!);
+            if (_street != null) await prefs.setString('tpl_street', _street!);
+            await prefs.setDouble('tpl_lat', _position.latitude);
+            await prefs.setDouble('tpl_lng', _position.longitude);
+
+            final Set<String> fNames =
+                prefs.getStringList('tpl_first')?.toSet() ?? {};
+            final Set<String> lNames =
+                prefs.getStringList('tpl_last')?.toSet() ?? {};
+            final Set<String> mNames =
+                prefs.getStringList('tpl_middle')?.toSet() ?? {};
+            for (final r in residents) {
+              if (r.firstName.isNotEmpty) fNames.add(r.firstName);
+              if (r.lastName.isNotEmpty) lNames.add(r.lastName);
+              if (r.middleName != null && r.middleName!.isNotEmpty)
+                mNames.add(r.middleName!);
+            }
+            await prefs.setStringList('tpl_first', fNames.toList());
+            await prefs.setStringList('tpl_last', lNames.toList());
+            await prefs.setStringList('tpl_middle', mNames.toList());
+          } catch (_) {}
+        }
         _snack(
           _isEdit ? 'Muvaffaqiyatli yangilandi!' : 'Muvaffaqiyatli saqlandi!',
           success: true,
@@ -290,6 +373,50 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     );
   }
 
+  bool _hasChanges() {
+    if (_isEdit)
+      return false; // Tahrirlashda shart emas deb hisoblaymiz (ixtiyoriy)
+    if (_step > 0) return true;
+    if (_houseCtrl.text.isNotEmpty ||
+        _buildingCtrl.text.isNotEmpty ||
+        _apartmentCtrl.text.isNotEmpty ||
+        _headFirstCtrl.text.isNotEmpty ||
+        _headLastCtrl.text.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> _showExitDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Diqqat!'),
+            content: const Text(
+              'Xatlovni tugatmasdan chiqmoqchimisiz? Kiritilgan ma\'lumotlar saqlanmaydi.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Yo\'q, qolish',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+
+                child: const Text(
+                  'Ha, chiqish',
+                  style: TextStyle(color: AppColors.danger),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   //  BUILD
   // ═══════════════════════════════════════════════════════════════════
@@ -299,24 +426,34 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
       ),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F6F8),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(),
-              _buildStepsIndicator(),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: KeyedSubtree(
-                    key: ValueKey(_step),
-                    child: _buildCurrentStep(),
+      child: PopScope(
+        canPop: !_hasChanges(),
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final shouldPop = await _showExitDialog();
+          if (shouldPop && context.mounted) {
+            Navigator.pop(context);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF5F6F8),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildTopBar(),
+                _buildStepsIndicator(),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: KeyedSubtree(
+                      key: ValueKey(_step),
+                      child: _buildCurrentStep(),
+                    ),
                   ),
                 ),
-              ),
-              _buildBottomBar(),
-            ],
+                _buildBottomBar(),
+              ],
+            ),
           ),
         ),
       ),
@@ -330,7 +467,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              if (_hasChanges()) {
+                final ok = await _showExitDialog();
+                if (ok && mounted) Navigator.pop(context);
+              } else {
+                Navigator.pop(context);
+              }
+            },
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: AppColors.govNavy,
@@ -366,7 +510,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${_step + 1} / 3',
+              '${_step + 1} / 4',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -381,9 +525,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
   String _stepTitle(int step) {
     switch (step) {
-      case 0: return 'Manzil va joylashuv';
-      case 1: return 'Oila boshlig\'i ma\'lumotlari';
-      default: return 'Qo\'shimcha oila a\'zolari';
+      case 0:
+        return 'Manzil va joylashuv';
+      case 1:
+        return 'Oila boshlig\'i ma\'lumotlari';
+      case 2:
+        return 'Qo\'shimcha oila a\'zolari';
+      default:
+        return 'Ma\'lumotlarni tekshirish';
     }
   }
 
@@ -392,7 +541,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
-        children: List.generate(3, (i) {
+        children: List.generate(4, (i) {
           final done = i < _step;
           final current = i == _step;
           return Expanded(
@@ -400,28 +549,30 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: current ? 28 : 20,
-                  height: 20,
+                  width: current ? 24 : 18,
+                  height: 18,
                   decoration: BoxDecoration(
                     color: done || current
                         ? AppColors.govNavy
                         : const Color(0xFFE5EAF0),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(9),
                   ),
                   child: Center(
                     child: done
-                        ? const Icon(Icons.check, size: 12, color: Colors.white)
+                        ? const Icon(Icons.check, size: 10, color: Colors.white)
                         : Text(
                             '${i + 1}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: current ? Colors.white : AppColors.textSecondary,
+                              color: current
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
                             ),
                           ),
                   ),
                 ),
-                if (i < 2)
+                if (i < 3)
                   Expanded(
                     child: Container(
                       height: 2,
@@ -487,20 +638,31 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           headMiddleCtrl: _headMiddleCtrl,
           headPhoneCtrl: _headPhoneCtrl,
           headGender: _headGender,
+          headBirthDate: _headBirthDate,
+          cachedFirstNames: _cachedFirstNames,
+          cachedLastNames: _cachedLastNames,
+          cachedMiddleNames: _cachedMiddleNames,
           onGenderChanged: (v) => setState(() => _headGender = v),
+          onBirthDateChanged: (d) => setState(() => _headBirthDate = d),
         );
-      default:
+      case 2:
         return Step2MembersStep(
+          cachedFirstNames: _cachedFirstNames,
+          cachedLastNames: _cachedLastNames,
+          cachedMiddleNames: _cachedMiddleNames,
           members: _members
-              .map((m) => MemberData(
-                    firstCtrl: m.firstCtrl,
-                    lastCtrl: m.lastCtrl,
-                    middleCtrl: m.middleCtrl,
-                    phoneCtrl: m.phoneCtrl,
-                    showPhone: m.showPhone,
-                    gender: m.gender,
-                    role: m.role,
-                  ))
+              .map(
+                (m) => MemberData(
+                  firstCtrl: m.firstCtrl,
+                  lastCtrl: m.lastCtrl,
+                  middleCtrl: m.middleCtrl,
+                  phoneCtrl: m.phoneCtrl,
+                  showPhone: m.showPhone,
+                  gender: m.gender,
+                  role: m.role,
+                  birthDate: m.birthDate,
+                ),
+              )
               .toList(),
           roles: _roles,
           onAddMember: () => setState(() => _members.add(_Member())),
@@ -508,6 +670,40 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           onGenderChanged: (i, g) => setState(() => _members[i].gender = g),
           onRoleChanged: (i, r) => setState(() => _members[i].role = r),
           onPhoneToggle: (i, v) => setState(() => _members[i].showPhone = v),
+          onBirthDateChanged: (i, d) => setState(() => _members[i].birthDate = d),
+        );
+      default:
+        return Step3PreviewStep(
+          data: {
+            'propertyType': _propertyType,
+            'tuman': _tuman,
+            'mfy': _mfy,
+            'street': _street,
+            'houseNumber': _houseCtrl.text,
+            'buildingNumber': _buildingCtrl.text,
+            'apartment': _apartmentCtrl.text,
+            'floor': _floorCtrl.text,
+            'headFirst': _headFirstCtrl.text,
+            'headLast': _headLastCtrl.text,
+            'headMiddle': _headMiddleCtrl.text,
+            'headGender': _headGender,
+            'headPhone': _headPhoneCtrl.text != '+998 '
+                ? _headPhoneCtrl.text
+                : null,
+            'members': _members
+                .where((m) => m.firstCtrl.text.trim().isNotEmpty)
+                .map(
+                  (m) => {
+                    'first': m.firstCtrl.text,
+                    'last': m.lastCtrl.text,
+                    'middle': m.middleCtrl.text,
+                    'phone': m.phoneCtrl.text,
+                    'gender': m.gender,
+                    'role': m.role,
+                  },
+                )
+                .toList(),
+          },
         );
     }
   }
@@ -537,13 +733,15 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           _snack("Hudud ma'lumotlarini to'liq tanlang");
                           return;
                         }
-                        if (_propertyType == kHouse && _houseCtrl.text.isEmpty) {
+                        if (_propertyType == kHouse &&
+                            _houseCtrl.text.isEmpty) {
                           _snack("Uy raqamini kiriting");
                           return;
                         }
                         if (_propertyType == kApartment &&
                             _copiedFromBuildingKey == null &&
-                            (_buildingCtrl.text.isEmpty || _apartmentCtrl.text.isEmpty)) {
+                            (_buildingCtrl.text.isEmpty ||
+                                _apartmentCtrl.text.isEmpty)) {
                           _snack("Bino va kvartira raqamini kiriting");
                           return;
                         }
@@ -553,12 +751,40 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           _snack("Kvartira raqamini kiriting");
                           return;
                         }
+
+                        // Dublikatlarni tekshirish (faqat 0-qadamda)
+                        final provider = Provider.of<AppProvider>(context, listen: false);
+                        final hNum = _houseCtrl.text.trim();
+                        final bNum = _buildingCtrl.text.trim();
+                        final aNum = _apartmentCtrl.text.trim();
+                        bool isDuplicate = provider.households.any((h) {
+                           if (_isEdit && widget.existing?.id == h.id) return false;
+                           if (h.tumanName != _tuman) return false;
+                           if (h.mfyName != _mfy) return false;
+                           if (h.streetName != _street) return false;
+                           if (h.propertyType != _propertyType) return false;
+
+                           if (_propertyType == kHouse) {
+                             return h.houseNumber == hNum;
+                           } else {
+                             return h.buildingNumber == bNum && h.apartment == aNum;
+                           }
+                        });
+
+                        if (isDuplicate) {
+                           _snack("Bunday manzilga ega xonadon allaqachon mavjud!");
+                           return;
+                        }
+
                         setState(() => _step++);
                       } else if (_step == 1) {
-                        if (_headFirstCtrl.text.isEmpty || _headLastCtrl.text.isEmpty) {
+                        if (_headFirstCtrl.text.isEmpty ||
+                            _headLastCtrl.text.isEmpty) {
                           _snack('Ism va familiyani kiriting');
                           return;
                         }
+                        setState(() => _step++);
+                      } else if (_step == 2) {
                         setState(() => _step++);
                       } else {
                         _save();
@@ -570,7 +796,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               ),
               child: _saving
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(_step < 2 ? 'Davom etish' : 'Saqlash'),
+                  : Text(_step < 3 ? 'Davom etish' : 'Bazaga yuklash'),
             ),
           ),
         ],

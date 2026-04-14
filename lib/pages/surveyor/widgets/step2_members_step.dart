@@ -14,6 +14,7 @@ class MemberData {
   bool showPhone;
   String gender;
   String role;
+  DateTime? birthDate;
 
   MemberData({
     required this.firstCtrl,
@@ -23,6 +24,7 @@ class MemberData {
     this.showPhone = false,
     this.gender = 'MALE',
     this.role = 'Turmush o\'rtog\'i',
+    this.birthDate,
   });
 }
 
@@ -34,6 +36,10 @@ class Step2MembersStep extends StatelessWidget {
   final void Function(int index, String gender) onGenderChanged;
   final void Function(int index, String role) onRoleChanged;
   final void Function(int index, bool show) onPhoneToggle;
+  final void Function(int index, DateTime? date) onBirthDateChanged;
+  final List<String> cachedFirstNames;
+  final List<String> cachedLastNames;
+  final List<String> cachedMiddleNames;
 
   const Step2MembersStep({
     super.key,
@@ -44,6 +50,10 @@ class Step2MembersStep extends StatelessWidget {
     required this.onGenderChanged,
     required this.onRoleChanged,
     required this.onPhoneToggle,
+    required this.onBirthDateChanged,
+    this.cachedFirstNames = const [],
+    this.cachedLastNames = const [],
+    this.cachedMiddleNames = const [],
   });
 
   @override
@@ -81,10 +91,15 @@ class Step2MembersStep extends StatelessWidget {
                 role: members[i].role,
                 showPhone: members[i].showPhone,
                 roles: roles,
+                cachedFirstNames: cachedFirstNames,
+                cachedLastNames: cachedLastNames,
+                cachedMiddleNames: cachedMiddleNames,
+              birthDate: members[i].birthDate,
                 onRemove: () => onRemoveMember(i),
                 onGenderChanged: (g) => onGenderChanged(i, g),
                 onRoleChanged: (r) => onRoleChanged(i, r),
                 onPhoneToggle: (v) => onPhoneToggle(i, v),
+                onBirthDateChanged: (d) => onBirthDateChanged(i, d),
               ),
             ),
           ),

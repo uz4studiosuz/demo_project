@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/colors.dart';
 import 'surveyor_form_widgets.dart';
@@ -12,7 +13,12 @@ class Step1HeadStep extends StatelessWidget {
   final TextEditingController headMiddleCtrl;
   final TextEditingController headPhoneCtrl;
   final String headGender;
+  final DateTime? headBirthDate;
   final void Function(String) onGenderChanged;
+  final void Function(DateTime?) onBirthDateChanged;
+  final List<String> cachedFirstNames;
+  final List<String> cachedLastNames;
+  final List<String> cachedMiddleNames;
 
   const Step1HeadStep({
     super.key,
@@ -22,6 +28,11 @@ class Step1HeadStep extends StatelessWidget {
     required this.headPhoneCtrl,
     required this.headGender,
     required this.onGenderChanged,
+    required this.onBirthDateChanged,
+    this.headBirthDate,
+    this.cachedFirstNames = const [],
+    this.cachedLastNames = const [],
+    this.cachedMiddleNames = const [],
   });
 
   @override
@@ -40,6 +51,7 @@ class Step1HeadStep extends StatelessWidget {
                     headLastCtrl,
                     'Familiyasi',
                     required: true,
+                    suggestions: cachedLastNames,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -48,6 +60,7 @@ class Step1HeadStep extends StatelessWidget {
                     headFirstCtrl,
                     'Ismi',
                     required: true,
+                    suggestions: cachedFirstNames,
                   ),
                 ),
               ],
@@ -56,9 +69,16 @@ class Step1HeadStep extends StatelessWidget {
             SurveyorFormWidgets.formField(
               headMiddleCtrl,
               'Sharifi (Otchestvasi)',
+              suggestions: cachedMiddleNames,
             ),
             const SizedBox(height: 10),
             _GenderSelector(value: headGender, onChanged: onGenderChanged),
+            const SizedBox(height: 10),
+            SurveyorFormWidgets.datePicker(
+              context,
+              selectedDate: headBirthDate,
+              onChanged: onBirthDateChanged,
+            ),
             const SizedBox(height: 12),
             SurveyorFormWidgets.formField(
               headPhoneCtrl,
@@ -107,3 +127,4 @@ class _GenderSelector extends StatelessWidget {
     );
   }
 }
+

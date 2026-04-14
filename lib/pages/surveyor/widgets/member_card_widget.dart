@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/colors.dart';
 import 'surveyor_form_widgets.dart';
@@ -11,11 +12,16 @@ class MemberCardWidget extends StatelessWidget {
   final String gender;
   final String role;
   final bool showPhone;
+  final DateTime? birthDate;
   final List<String> roles;
+  final List<String> cachedFirstNames;
+  final List<String> cachedLastNames;
+  final List<String> cachedMiddleNames;
   final VoidCallback onRemove;
   final void Function(String) onGenderChanged;
   final void Function(String) onRoleChanged;
   final void Function(bool) onPhoneToggle;
+  final void Function(DateTime?) onBirthDateChanged;
 
   const MemberCardWidget({
     super.key,
@@ -32,6 +38,11 @@ class MemberCardWidget extends StatelessWidget {
     required this.onGenderChanged,
     required this.onRoleChanged,
     required this.onPhoneToggle,
+    required this.onBirthDateChanged,
+    this.birthDate,
+    this.cachedFirstNames = const [],
+    this.cachedLastNames = const [],
+    this.cachedMiddleNames = const [],
   });
 
   @override
@@ -46,27 +57,41 @@ class MemberCardWidget extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: SurveyorFormWidgets.formField(lastCtrl, 'Familiyasi'),
+                    child: SurveyorFormWidgets.formField(
+                      lastCtrl,
+                      'Familiyasi',
+                      suggestions: cachedLastNames,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: SurveyorFormWidgets.formField(firstCtrl, 'Ismi'),
+                    child: SurveyorFormWidgets.formField(
+                      firstCtrl,
+                      'Ismi',
+                      suggestions: cachedFirstNames,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              SurveyorFormWidgets.formField(middleCtrl, 'Sharifi (Otchestvasi)'),
+              SurveyorFormWidgets.formField(
+                middleCtrl,
+                'Sharifi (Otchestvasi)',
+                suggestions: cachedMiddleNames,
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: _genderToggle(),
-                  ),
+                  Expanded(child: _genderToggle()),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: _roleDropdown(),
-                  ),
+                  Expanded(child: _roleDropdown()),
                 ],
+              ),
+              const SizedBox(height: 10),
+              SurveyorFormWidgets.datePicker(
+                context,
+                selectedDate: birthDate,
+                onChanged: onBirthDateChanged,
               ),
               const SizedBox(height: 12),
               _phoneSection(),
@@ -112,19 +137,10 @@ class MemberCardWidget extends StatelessWidget {
             color: active ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                    )
-                  ]
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
                 : null,
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: active ? AppColors.govNavy : AppColors.textSecondary,
-          ),
+          child: Icon(icon, size: 20, color: active ? AppColors.govNavy : AppColors.textSecondary),
         ),
       ),
     );
@@ -145,9 +161,7 @@ class MemberCardWidget extends StatelessWidget {
           onChanged: (v) {
             if (v != null) onRoleChanged(v);
           },
-          items: roles.map((r) {
-            return DropdownMenuItem(value: r, child: Text(r));
-          }).toList(),
+          items: roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
         ),
       ),
     );
@@ -187,3 +201,4 @@ class MemberCardWidget extends StatelessWidget {
     );
   }
 }
+

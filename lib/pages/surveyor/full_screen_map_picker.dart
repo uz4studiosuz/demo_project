@@ -118,10 +118,16 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             ],
           ),
           const Center(
-            child: Icon(
-              CupertinoIcons.pin_fill,
-              size: 50,
-              color: AppColors.danger,
+            child: Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                Icon(CupertinoIcons.pin_fill, size: 50, color: Colors.white),
+                Icon(
+                  CupertinoIcons.pin_fill,
+                  size: 45,
+                  color: AppColors.danger,
+                ),
+              ],
             ),
           ),
           Positioned(
