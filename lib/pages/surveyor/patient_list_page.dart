@@ -6,7 +6,8 @@ import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
 import '../../theme/colors.dart';
 import '../../widgets/household_info_sheet.dart';
-import 'surveyor_dashboard.dart';
+// surveyor_dashboard import removed — no longer needed
+import 'widgets/households_map_page.dart';
 import 'add_family_page.dart';
 import 'surveyor_search_page.dart';
 

@@ -1,8 +1,107 @@
+-- 0. GEOGRAPHY — Hududlar va Manzillar
+CREATE TABLE IF NOT EXISTS public.districts (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT NOT NULL UNIQUE,
+  is_city     BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS public.neighborhoods (
+  id          SERIAL PRIMARY KEY,
+  district_id INTEGER REFERENCES public.districts(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  UNIQUE(district_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS public.streets (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT NOT NULL UNIQUE
+);
+
+-- Seed Data: Districts (Tumanlar va Shaharlar)
+INSERT INTO public.districts (id, name, is_city) VALUES
+  (1,  'Farg''ona sh.',       true),
+  (2,  'Marg''ilon sh.',      true),
+  (3,  'Qo''qon sh.',         true),
+  (4,  'Quvasoy sh.',        true),
+  (5,  'O''zbekiston tumani', false),
+  (6,  'Farg''ona tumani',    false),
+  (7,  'Rishton tumani',     false),
+  (8,  'Quva tumani',        false),
+  (9,  'Toshloq tumani',     false),
+  (10, 'Oltiariq tumani',    false),
+  (11, 'Beshariq tumani',    false),
+  (12, 'Bog''dod tumani',     false),
+  (13, 'Dang''ara tumani',    false),
+  (14, 'Qo''shtepa tumani',   false),
+  (15, 'So''x tumani',        false),
+  (16, 'Uchko''prik tumani',  false),
+  (17, 'Yozyovon tumani',    false)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_city = EXCLUDED.is_city;
+
+-- Seed Data: Neighborhoods (MFY lar)
+INSERT INTO public.neighborhoods (district_id, name) VALUES
+  -- Farg'ona sh. (1)
+  (1, 'Bag''ishamol MFY'), (1, 'Bahor MFY'), (1, 'Darvozaqo''rg''on MFY'), (1, 'Do''stlik MFY'), (1, 'Fayz MFY'), (1, 'G''alaba MFY'), 
+  (1, 'Guliston MFY'), (1, 'Hamkor MFY'), (1, 'Istiqbol MFY'), (1, 'Kirgili MFY'), (1, 'Ko''hna shahar MFY'), (1, 'Marifat MFY'), 
+  (1, 'Milliy bog'' MFY'), (1, 'Mustaqillik MFY'), (1, 'Navoiy MFY'), (1, 'Navro''z MFY'), (1, 'Niyozbekhoja MFY'), (1, 'Oydin MFY'), 
+  (1, 'Sarbon MFY'), (1, 'Tinchlik MFY'), (1, 'To''ytepa MFY'), (1, 'Uychi MFY'), (1, 'Vodil MFY'), (1, 'Yangi Farg''ona MFY'), 
+  (1, 'Yangi hayot MFY'), (1, 'Yashillik MFY'),
+  -- Marg'ilon sh. (2)
+  (2, 'Asaka MFY'), (2, 'Atlas MFY'), (2, 'Bog''boqcha MFY'), (2, 'Bogiston MFY'), (2, 'Chilonzor MFY'), (2, 'Guliston MFY'), 
+  (2, 'Hamza MFY'), (2, 'Hisor MFY'), (2, 'Markaziy MFY'), (2, 'Mustaqillik MFY'), (2, 'Navro''z MFY'), (2, 'Pahlavon MFY'), 
+  (2, 'Rizma MFY'), (2, 'Soliqo''rg''on MFY'), (2, 'Yangiariq MFY'), (2, 'Yipak yo''li MFY'),
+  -- Qo'qon sh. (3)
+  (3, 'Bog''ishamol MFY'), (3, 'Do''stlik MFY'), (3, 'G''ovsar MFY'), (3, 'Guliston MFY'), (3, 'Istiqbol MFY'), (3, 'Ko''kdala MFY'), 
+  (3, 'Markaziy MFY'), (3, 'Mustakillik MFY'), (3, 'Navoiy MFY'), (3, 'Uchko''prik MFY'), (3, 'Yangi hayot MFY'),
+  -- Quvasoy sh. (4)
+  (4, 'Chimyon MFY'), (4, 'Do''stlik MFY'), (4, 'Markaziy MFY'), (4, 'Navro''z MFY'), (4, 'Tinchlik MFY'), (4, 'Yangi MFY'),
+  -- Farg'ona tumani (6)
+  (6, 'Axunboboev MFY'), (6, 'Bog''dod MFY'), (6, 'Daminobod MFY'), (6, 'Evchi MFY'), (6, 'Janubiy MFY'), (6, 'Kuyibozor MFY'), 
+  (6, 'Mindon MFY'), (6, 'Mustakillik MFY'), (6, 'Poytovvoq MFY'), (6, 'Sarbon MFY'), (6, 'Shoximardon MFY'), (6, 'Vodil MFY'), (6, 'Yangiobod MFY'),
+  -- O'zbekiston tumani (5)
+  (5, 'Bo''ston MFY'), (5, 'G''ulomlar MFY'), (5, 'Ittifoq MFY'), (5, 'Mehnat MFY'), (5, 'Mustaqillik MFY'), (5, 'Navoiy MFY'), 
+  (5, 'Nursux MFY'), (5, 'Qudash MFY'), (5, 'Sho''rsuv MFY'), (5, 'Tinchlik MFY'), (5, 'Yakkatut MFY'),
+  -- Rishton tumani (7)
+  (7, 'Buloqboshi MFY'), (7, 'Do''stlik MFY'), (7, 'Istiqlol MFY'), (7, 'Kulolchilar MFY'), (7, 'Markaziy MFY'), (7, 'Navro''z MFY'), 
+  (7, 'Oqmachit MFY'), (7, 'Oqyer MFY'), (7, 'Zohidon MFY'),
+  -- Quva tumani (8)
+  (8, 'Bahor MFY'), (8, 'G''alaba MFY'), (8, 'Ko''rg''oncha MFY'), (8, 'Markaz MFY'), (8, 'Pastxalfa MFY'), (8, 'Qoraqum MFY'), 
+  (8, 'Tinchlik MFY'), (8, 'Tolmozor MFY'),
+  -- Toshloq tumani (9)
+  (9, 'Bo''ston MFY'), (9, 'Do''stlik MFY'), (9, 'Nayman MFY'), (9, 'Sadda MFY'), (9, 'Tinchlik MFY'), (9, 'Zarkent MFY'),
+  -- Oltiariq tumani (10)
+  (10, 'Azizbek MFY'), (10, 'Bog''li MFY'), (10, 'Do''stlik MFY'), (10, 'Guliston MFY'), (10, 'Mustaqillik MFY'), (10, 'Tinchlik MFY'),
+  -- Beshariq tumani (11)
+  (11, 'Baxt MFY'), (11, 'Gulshan MFY'), (11, 'Mehribon MFY'), (11, 'Mustaqillik MFY'), (11, 'Obod MFY'), (11, 'Tinchlik MFY'),
+  -- Bog'dod tumani (12)
+  (12, 'Do''stlik MFY'), (12, 'G''alaba MFY'), (12, 'Markaziy MFY'), (12, 'Navro''z MFY'), (12, 'Yangi hayot MFY'),
+  -- Dang'ara tumani (13)
+  (13, 'Bog''iston MFY'), (13, 'Do''stlik MFY'), (13, 'Markaziy MFY'), (13, 'Tinchlik MFY'),
+  -- Qo'shtepa tumani (14)
+  (14, 'Bahor MFY'), (14, 'Do''stlik MFY'), (14, 'Markaziy MFY'), (14, 'Navro''z MFY'),
+  -- So'x tumani (15)
+  (15, 'Markaziy MFY'), (15, 'Oqsoy MFY'), (15, 'So''x MFY'), (15, 'Yangi hayot MFY'),
+  -- Uchko'prik tumani (16)
+  (16, 'Bog''ishamol MFY'), (16, 'Do''stlik MFY'), (16, 'Markaziy MFY'), (16, 'Navro''z MFY'),
+  -- Yozyovon tumani (17)
+  (17, 'Bahor MFY'), (17, 'G''alaba MFY'), (17, 'Markaziy MFY'), (17, 'Tinchlik MFY')
+ON CONFLICT DO NOTHING;
+
+-- Seed Data: Streets (Ko'chalar)
+INSERT INTO public.streets (name) VALUES
+  ('Amir Temur ko''chasi'), ('A. Navoiy ko''chasi'), ('Asaka ko''chasi'), ('Bahor ko''chasi'), ('Bog''ishamol ko''chasi'), 
+  ('Do''stlik ko''chasi'), ('Fayz ko''chasi'), ('G''alaba ko''chasi'), ('Go''zal diyor ko''chasi'), ('Guliston ko''chasi'), 
+  ('Hamza ko''chasi'), ('Istiqlol ko''chasi'), ('Ko''hna shahar ko''chasi'), ('Markaziy ko''cha'), ('Murabbiylar ko''chasi'), 
+  ('Mustaqillik ko''chasi'), ('Navro''z ko''chasi'), ('Navoiy ko''chasi'), ('Niyozbekhoja ko''chasi'), ('Sarbon ko''chasi'), 
+  ('Sulton Murodbek ko''chasi'), ('Tinchlik ko''chasi'), ('Turkiston ko''chasi'), ('Uychi ko''chasi'), ('Yangi hayot ko''chasi'), 
+  ('Yangi ko''cha'), ('Yashillik ko''chasi'), ('Yipak yo''li ko''chasi')
+ON CONFLICT (name) DO NOTHING;
+
 -- 1. APP_USERS — Jadvallar
 CREATE TABLE IF NOT EXISTS public.app_users (
   id               BIGSERIAL PRIMARY KEY,
   branch_id        BIGINT,
-  district_id      BIGINT,
+  district_id      BIGINT REFERENCES public.districts(id),
   first_name       TEXT NOT NULL,
   last_name        TEXT NOT NULL,
   middle_name      TEXT,
@@ -16,19 +115,21 @@ CREATE TABLE IF NOT EXISTS public.app_users (
 );
 
 -- Demo foydalanuvchilar
-INSERT INTO public.app_users (first_name, last_name, username, password_hash, role)
+INSERT INTO public.app_users (first_name, last_name, username, password_hash, role, district_id)
 VALUES
-  ('Ali',    'Valiyev',   'surveyor1', '1234', 'SURVEYOR'),
-  ('Bobur',  'Toshmatov', 'surveyor2', '1234', 'SURVEYOR'),
-  ('Jasur',  'Rahimov',   'driver1',   '1234', 'DRIVER'),
-  ('Dilnoza','Karimova',  'driver2',   '1234', 'DRIVER')
+  ('Ali',    'Valiyev',   'surveyor1', '1234', 'SURVEYOR', 1),
+  ('Bobur',  'Toshmatov', 'surveyor2', '1234', 'SURVEYOR', 2),
+  ('Jasur',  'Rahimov',   'driver1',   '1234', 'DRIVER', 1),
+  ('Dilnoza','Karimova',  'driver2',   '1234', 'DRIVER', 6)
 ON CONFLICT (username) DO NOTHING;
 
 -- 2. HOUSEHOLDS — Xonadonlar
 CREATE TABLE IF NOT EXISTS public.households (
   id                    BIGSERIAL PRIMARY KEY,
   region_id             BIGINT NOT NULL DEFAULT 1,
-  district_id           BIGINT NOT NULL DEFAULT 1,
+  district_id           BIGINT REFERENCES public.districts(id),
+  neighborhood_id       BIGINT REFERENCES public.neighborhoods(id),
+  street_id             BIGINT REFERENCES public.streets(id),
   branch_id             BIGINT,
   created_by_agent_id   BIGINT NOT NULL DEFAULT 1,
   cadastral_number      TEXT,
@@ -40,6 +141,10 @@ CREATE TABLE IF NOT EXISTS public.households (
   longitude             DOUBLE PRECISION NOT NULL DEFAULT 71.7864,
   is_verified           BOOLEAN NOT NULL DEFAULT FALSE,
   is_active             BOOLEAN NOT NULL DEFAULT TRUE,
+  property_type         TEXT NOT NULL DEFAULT 'HOUSE' CHECK (property_type IN ('HOUSE', 'APARTMENT')),
+  building_number       TEXT,
+  floor                 INT,
+  -- Eski text formatidagi ustunlar (migratsiya uchun yoki zaxira)
   tuman_name            TEXT,
   qfy_name              TEXT,
   mfy_name              TEXT,
@@ -47,12 +152,6 @@ CREATE TABLE IF NOT EXISTS public.households (
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- Yangi ustunlarni qo'shish (Xonadon/Kvartira uchun)
-ALTER TABLE public.households
-  ADD COLUMN IF NOT EXISTS property_type   TEXT NOT NULL DEFAULT 'HOUSE' CHECK (property_type IN ('HOUSE', 'APARTMENT')),
-  ADD COLUMN IF NOT EXISTS building_number TEXT,
-  ADD COLUMN IF NOT EXISTS floor           INT;
 
 -- 3. RESIDENTS — Aholi
 CREATE TABLE IF NOT EXISTS public.residents (
@@ -75,18 +174,28 @@ CREATE TABLE IF NOT EXISTS public.residents (
 -- Indekslar
 CREATE INDEX IF NOT EXISTS idx_residents_household ON public.residents(household_id);
 CREATE INDEX IF NOT EXISTS idx_households_active   ON public.households(is_active);
+CREATE INDEX IF NOT EXISTS idx_neighborhood_dist   ON public.neighborhoods(district_id);
 
 -- 4. RLS va POLICIES (O'chirish va qayta yaratish)
-ALTER TABLE public.app_users   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.households  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.residents   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.districts     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.neighborhoods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.streets       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.households    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.residents     ENABLE ROW LEVEL SECURITY;
 
--- Eski ruxsatlarni o'chirish (Agar mavjud bo'lsa)
-DROP POLICY IF EXISTS "allow_read_app_users"  ON public.app_users;
-DROP POLICY IF EXISTS "allow_all_households"  ON public.households;
-DROP POLICY IF EXISTS "allow_all_residents"   ON public.residents;
+-- Eski ruxsatlarni o'chirish
+DROP POLICY IF EXISTS "allow_read_districts"     ON public.districts;
+DROP POLICY IF EXISTS "allow_read_neighborhoods" ON public.neighborhoods;
+DROP POLICY IF EXISTS "allow_read_streets"       ON public.streets;
+DROP POLICY IF EXISTS "allow_read_app_users"     ON public.app_users;
+DROP POLICY IF EXISTS "allow_all_households"     ON public.households;
+DROP POLICY IF EXISTS "allow_all_residents"      ON public.residents;
 
--- Yangi ruxsatlarni yaratish
-CREATE POLICY "allow_read_app_users"  ON public.app_users  FOR SELECT USING (true);
-CREATE POLICY "allow_all_households"  ON public.households FOR ALL    USING (true) WITH CHECK (true);
-CREATE POLICY "allow_all_residents"   ON public.residents  FOR ALL    USING (true) WITH CHECK (true);
+-- Yangi ruxsatlarni yaratish (Hozircha hamma o'qishi mumkin)
+CREATE POLICY "allow_read_districts"     ON public.districts     FOR SELECT USING (true);
+CREATE POLICY "allow_read_neighborhoods" ON public.neighborhoods FOR SELECT USING (true);
+CREATE POLICY "allow_read_streets"       ON public.streets       FOR SELECT USING (true);
+CREATE POLICY "allow_read_app_users"     ON public.app_users     FOR SELECT USING (true);
+CREATE POLICY "allow_all_households"     ON public.households    FOR ALL    USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_residents"      ON public.residents     FOR ALL    USING (true) WITH CHECK (true);
