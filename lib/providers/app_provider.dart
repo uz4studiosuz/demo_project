@@ -1,105 +1,130 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
 import '../models/user_role.dart';
 import '../models/user_model.dart';
-import '../services/api_service.dart';
-import '../services/auth_service.dart';
+import '../services/supabase_service.dart';
 
 class AppProvider extends ChangeNotifier {
-  final ApiService _apiService = ApiService();
-  final AuthService _authService = AuthService();
-
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
-  
+
   UserRole get currentUserRole => _currentUser?.role ?? UserRole.none;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   List<HouseholdModel> _households = [];
   List<HouseholdModel> get households => _households;
 
-  // Login
+  // ─────────────────────────────────────────────────────────────────
+  //  AUTH
+  // ─────────────────────────────────────────────────────────────────
+
+  /// Supabase app_users jadvalidan username/password tekshiradi.
   Future<bool> login(String username, String password) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
-    final role = await _authService.login(username, password);
-    if (role != UserRole.none) {
-      _currentUser = UserModel(
-        id: 1, 
-        firstName: 'Test', 
-        lastName: 'User', 
-        username: username, 
-        role: role, 
-        createdAt: DateTime.now(), 
-        updatedAt: DateTime.now()
-      );
+    try {
+      final user = await SupabaseService.login(username, password);
+      if (user != null) {
+        _currentUser = user;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = 'Login yoki parol noto\'g\'ri';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } on PostgrestException catch (e) {
+      _errorMessage = 'Server xatoligi: ${e.message}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Tarmoq xatoligi. Internet aloqasini tekshiring.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
-
-    _isLoading = false;
-    notifyListeners();
-
-    return role != UserRole.none;
   }
 
-  // Load Households
+  void logout() {
+    _currentUser = null;
+    _households = [];
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  HOUSEHOLDS
+  // ─────────────────────────────────────────────────────────────────
+
   Future<void> fetchHouseholds() async {
     _isLoading = true;
     notifyListeners();
 
-    _households = await _apiService.getHouseholds();
+    try {
+      _households = await SupabaseService.getHouseholds();
+    } catch (e) {
+      _errorMessage = 'Ma\'lumotlarni yuklashda xatolik';
+    }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  // Save Household and its Residents
-  Future<bool> saveHouseholdWithResidents(HouseholdModel household, List<ResidentModel> residents) async {
+  Future<bool> saveHouseholdWithResidents(
+      HouseholdModel household, List<ResidentModel> residents) async {
     _isLoading = true;
     notifyListeners();
 
-    // 1. Create Household
-    final newHh = await _apiService.createHousehold(household);
-    
+    // 1. Xonadon yaratish
+    final newHh = await SupabaseService.createHousehold(household);
+
     if (newHh != null) {
-      // 2. Create residents for this household
-      for (var res in residents) {
-        final resToSave = ResidentModel(
+      // 2. Residentlarni yaratish
+      for (final res in residents) {
+        await SupabaseService.createResident(ResidentModel(
           id: 0,
           householdId: newHh.id,
           firstName: res.firstName,
           lastName: res.lastName,
+          middleName: res.middleName,
           phonePrimary: res.phonePrimary,
           gender: res.gender,
           role: res.role,
+          birthDate: res.birthDate,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-        );
-        await _apiService.createResident(resToSave);
+        ));
       }
-      
-      // Refresh list
+
       await fetchHouseholds();
-      
       _isLoading = false;
       notifyListeners();
       return true;
     }
 
+    _errorMessage = 'Xonadon saqlashda xatolik';
     _isLoading = false;
     notifyListeners();
     return false;
   }
 
-  // Update Household
   Future<bool> updateHousehold(HouseholdModel household) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _apiService.updateHousehold(household);
+    final result = await SupabaseService.updateHousehold(household);
     if (result != null) {
       await fetchHouseholds();
       _isLoading = false;
@@ -107,42 +132,41 @@ class AppProvider extends ChangeNotifier {
       return true;
     }
 
+    _errorMessage = 'Yangilashda xatolik';
     _isLoading = false;
     notifyListeners();
     return false;
   }
 
-  // Update Household + replace all residents
   Future<bool> updateHouseholdWithResidents(
       HouseholdModel household, List<ResidentModel> residents) async {
     _isLoading = true;
     notifyListeners();
 
-    // 1. Update household address/location
-    final updated = await _apiService.updateHousehold(household);
+    // 1. Xonadonni yangilash
+    final updated = await SupabaseService.updateHousehold(household);
     if (updated == null) {
+      _errorMessage = 'Xonadonni yangilashda xatolik';
       _isLoading = false;
       notifyListeners();
       return false;
     }
 
-    // 2. Delete old residents
-    final oldResidents = List<int>.from(
-        updated.residents.map((r) => r.id));
-    for (final id in oldResidents) {
-      await _apiService.deleteResident(id);
-    }
+    // 2. Eski residentlarni o'chirish
+    await SupabaseService.deleteResidentsByHousehold(updated.id);
 
-    // 3. Create new residents
+    // 3. Yangi residentlar qo'shish
     for (final res in residents) {
-      await _apiService.createResident(ResidentModel(
+      await SupabaseService.createResident(ResidentModel(
         id: 0,
         householdId: updated.id,
         firstName: res.firstName,
         lastName: res.lastName,
+        middleName: res.middleName,
         phonePrimary: res.phonePrimary,
         gender: res.gender,
         role: res.role,
+        birthDate: res.birthDate,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ));
@@ -154,30 +178,31 @@ class AppProvider extends ChangeNotifier {
     return true;
   }
 
-  // Delete Household
   Future<bool> deleteHousehold(int id) async {
     _isLoading = true;
     notifyListeners();
-    
-    bool success = await _apiService.deleteHousehold(id);
+
+    final success = await SupabaseService.deleteHousehold(id);
     if (success) {
-      _households.removeWhere((element) => element.id == id);
+      _households.removeWhere((h) => h.id == id);
     }
-    
+
     _isLoading = false;
     notifyListeners();
     return success;
   }
 
-  // Delete Resident
+  // ─────────────────────────────────────────────────────────────────
+  //  RESIDENTS
+  // ─────────────────────────────────────────────────────────────────
+
   Future<bool> deleteResident(int residentId) async {
     _isLoading = true;
     notifyListeners();
 
-    bool success = await _apiService.deleteResident(residentId);
+    final success = await SupabaseService.deleteResident(residentId);
     if (success) {
-      // Lokal ro'yxatdan ham olib tashlash
-      for (var hh in _households) {
+      for (final hh in _households) {
         hh.residents.removeWhere((r) => r.id == residentId);
       }
     }
@@ -187,12 +212,11 @@ class AppProvider extends ChangeNotifier {
     return success;
   }
 
-  // Update Resident
   Future<bool> updateResident(ResidentModel resident) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _apiService.updateResident(resident);
+    final result = await SupabaseService.updateResident(resident);
     if (result != null) {
       await fetchHouseholds();
       _isLoading = false;
@@ -205,9 +229,8 @@ class AppProvider extends ChangeNotifier {
     return false;
   }
 
-  void logout() {
-    _currentUser = null;
-    _households = [];
+  void clearError() {
+    _errorMessage = null;
     notifyListeners();
   }
 }

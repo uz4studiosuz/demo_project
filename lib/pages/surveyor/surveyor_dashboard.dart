@@ -347,15 +347,28 @@ class _HouseholdCard extends StatelessWidget {
   }
 }
 
+// Public wrapper — boshqa sahifalardan ham foydalanish uchun
+class HouseholdsMapPage extends StatelessWidget {
+  final HouseholdModel? focusHousehold;
+  const HouseholdsMapPage({super.key, this.focusHousehold});
+
+  @override
+  Widget build(BuildContext context) {
+    return _HouseholdsMapPage(focusHousehold: focusHousehold);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  XARITA (Tab 2) — Smart zoom-based rendering
 //  zoom < 11  → Tuman aggregate badges
 //  zoom 11-13 → MarkerCluster
-//  zoom >= 14 → Individual house markers with house number
+//  zoom >= 14 → Individual house markers / Building markers (grouped apartments)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _HouseholdsMapPage extends StatefulWidget {
-  const _HouseholdsMapPage();
+  /// Agar null bo'lmasa, xarita shu uyga fokus qiladi
+  final HouseholdModel? focusHousehold;
+  const _HouseholdsMapPage({this.focusHousehold});
 
   @override
   State<_HouseholdsMapPage> createState() => _HouseholdsMapPageState();
@@ -366,6 +379,24 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
   String _mapType = 'y';
   bool _isLocationLoading = false;
   double _currentZoom = 13.0;
+  HouseholdModel? _focusedHousehold;
+  bool _mapReady = false; // Tile yuklanish holati
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusHousehold != null) {
+      _focusedHousehold = widget.focusHousehold;
+      // Xarita ready bo'lgandan keyin fokus qilamiz
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(
+          LatLng(widget.focusHousehold!.latitude, widget.focusHousehold!.longitude),
+          17.0,
+        );
+        setState(() => _currentZoom = 17.0);
+      });
+    }
+  }
 
   void _toggleMapType() => setState(() {
         _mapType = _mapType == 'y' ? 'm' : _mapType == 'm' ? 's' : 'y';
@@ -411,6 +442,19 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
     return LatLng(lat / list.length, lng / list.length);
   }
 
+  // ── Ko'p qavatli binolarni guruhlash ──────────────────────────────
+  // Bir xil building_number + bir xil lat/lng → bitta bino, ichida N ta kvartira
+  Map<String, List<HouseholdModel>> _buildingGroups(List<HouseholdModel> all) {
+    final map = <String, List<HouseholdModel>>{};
+    for (final h in all) {
+      if (h.propertyType != kApartment) continue;
+      // Kalit: bino raqami + koordinatalar (2 decimal aniqlik — ~1 km)
+      final key = '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
+      map.putIfAbsent(key, () => []).add(h);
+    }
+    return map;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
@@ -429,6 +473,7 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
+                  onMapReady: () => setState(() => _mapReady = true),
                   onPositionChanged: (pos, _) {
                     if ((pos.zoom - _currentZoom).abs() > 0.4) {
                       setState(() => _currentZoom = pos.zoom);
@@ -511,27 +556,107 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                   // ── ZOOM >= 14 → Individual markers ──────────────
                   if (_currentZoom >= 14)
                     MarkerLayer(
-                      markers: households.map((h) => Marker(
-                        point: LatLng(h.latitude, h.longitude),
-                        width: 48, height: 54,
-                        child: GestureDetector(
-                          onTap: () => showHouseholdInfoSheet(context, h),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                              decoration: BoxDecoration(color: AppColors.govNavy, borderRadius: BorderRadius.circular(6)),
-                              child: Text(h.houseNumber ?? '?',
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      markers: [
+                        // ── 1. Alohida uylar (HOUSE) ──────────────────
+                        ...households.where((h) => h.propertyType != kApartment).map((h) {
+                          final isFocused = _focusedHousehold?.id == h.id;
+                          return Marker(
+                            point: LatLng(h.latitude, h.longitude),
+                            width: isFocused ? 60 : 48, height: isFocused ? 66 : 54,
+                            child: GestureDetector(
+                              onTap: () => showHouseholdInfoSheet(context, h),
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isFocused ? const Color(0xFFD32F2F) : AppColors.govNavy,
+                                    borderRadius: BorderRadius.circular(6),
+                                    boxShadow: isFocused ? [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 8)] : [],
+                                  ),
+                                  child: Text(h.houseNumber ?? '?',
+                                      style: TextStyle(color: Colors.white, fontSize: isFocused ? 12 : 10, fontWeight: FontWeight.bold)),
+                                ),
+                                Icon(Icons.location_on,
+                                    color: isFocused ? const Color(0xFFD32F2F) : AppColors.govNavy,
+                                    size: isFocused ? 34 : 28),
+                              ]),
                             ),
-                            const Icon(Icons.location_on, color: AppColors.govNavy, size: 28),
-                          ]),
-                        ),
-                      )).toList(),
+                          );
+                        }),
+
+                        // ── 2. Ko'p qavatli binolar (APARTMENT) — bitta marker/bino ──
+                        ..._buildingGroups(households).entries.map((entry) {
+                          final apartments = entry.value;
+                          final first = apartments.first;
+                          final point = LatLng(first.latitude, first.longitude);
+                          final isFocused = apartments.any((a) => a.id == _focusedHousehold?.id);
+                          final buildingNum = first.buildingNumber ?? '?';
+                          final aptCount = apartments.length;
+
+                          return Marker(
+                            point: point,
+                            width: 68, height: 70,
+                            child: GestureDetector(
+                              onTap: () => _showBuildingSheet(context, apartments),
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isFocused ? const Color(0xFF6A1B9A) : const Color(0xFF37474F),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: isFocused ? [BoxShadow(color: Colors.purple.withValues(alpha: 0.4), blurRadius: 10)] : [
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4)
+                                    ],
+                                  ),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    const Icon(Icons.apartment, color: Colors.white, size: 12),
+                                    const SizedBox(width: 3),
+                                    Text('$buildingNum-b • $aptCount kv',
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ]),
+                                ),
+                                Icon(Icons.location_on,
+                                    color: isFocused ? const Color(0xFF6A1B9A) : const Color(0xFF37474F),
+                                    size: 32),
+                              ]),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
                 ],
               ),
 
-              // Top info pill
+              // ── Loading overlay (tile yuklanguncha) ──────────────────
+              if (!_mapReady)
+                Container(
+                  color: const Color(0xFFF5F6F8),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 72, height: 72,
+                          decoration: BoxDecoration(
+                            color: AppColors.govNavy.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.map_outlined, color: AppColors.govNavy, size: 36),
+                        ),
+                        const SizedBox(height: 20),
+                        const CircularProgressIndicator(color: AppColors.govNavy, strokeWidth: 3),
+                        const SizedBox(height: 14),
+                        const Text('Xarita yuklanmoqda...',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.govNavy)),
+                        const SizedBox(height: 4),
+                        const Text('Iltimos kuting',
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // ── Top info pill ──────────────────────────────────────────
               Positioned(
                 top: MediaQuery.of(context).padding.top + 12,
                 left: 20, right: 20,
@@ -540,26 +665,64 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withValues(alpha: 0.90),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
                       ),
                       child: Row(children: [
-                        const Icon(Icons.map_outlined, color: AppColors.govNavy, size: 18),
-                        const SizedBox(width: 10),
+                        // Back tugmasi — ro'yxatdan kelganda
+                        if (widget.focusHousehold != null) ...[
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(
+                                color: AppColors.govNavy.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                                  color: AppColors.govNavy, size: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ] else ...[
+                          const Icon(Icons.map_outlined, color: AppColors.govNavy, size: 18),
+                          const SizedBox(width: 10),
+                        ],
                         Expanded(
-                          child: Text('Xaritada ${households.length} ta xonadon',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain)),
+                          child: widget.focusHousehold != null
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      widget.focusHousehold!.officialAddress,
+                                      style: const TextStyle(fontWeight: FontWeight.bold,
+                                          color: AppColors.textMain, fontSize: 13),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '${widget.focusHousehold!.residents.length} nafar aholi',
+                                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                )
+                              : Text('Xaritada ${households.length} ta xonadon',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMain)),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.govNavy.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+                            color: AppColors.govNavy.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
                             _currentZoom < 11 ? 'Tumanlar' : _currentZoom < 14 ? 'Klasterlar' : 'Xonadonlar',
-                            style: const TextStyle(fontSize: 11, color: AppColors.govNavy, fontWeight: FontWeight.w600)),
+                            style: const TextStyle(fontSize: 11, color: AppColors.govNavy, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ]),
                     ),
@@ -590,6 +753,87 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
           ),
         );
       },
+    );
+  }
+
+  // ── Ko'p qavatli bino sheet ───────────────────────────────────────
+  void _showBuildingSheet(BuildContext context, List<HouseholdModel> apartments) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 16),
+            Row(children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF37474F).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.apartment, color: Color(0xFF37474F), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${apartments.first.buildingNumber ?? "?"}–bino',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+                Text('${apartments.length} ta kvartira ro\'yxatda',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ])),
+            ]),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: apartments.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final apt = apartments[i];
+                  final head = apt.residents.isNotEmpty ? apt.residents.first : null;
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    leading: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: const Color(0xFF37474F).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
+                      child: Center(
+                        child: Text(
+                          apt.apartment ?? '?',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF37474F)),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      head != null ? '${head.lastName} ${head.firstName}' : 'Ma\'lumot yo\'q',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      '${apt.floor ?? "?"}–qavat • ${apt.residents.length} nafar',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                    onTap: () {
+                      Navigator.pop(context);
+                      showHouseholdInfoSheet(context, apt);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -6,7 +6,6 @@ import '../theme/colors.dart';
 import '../utils/locale_provider.dart';
 import '../models/user_role.dart';
 import '../providers/app_provider.dart';
-import '../widgets/liquid_background.dart';
 import 'surveyor/surveyor_dashboard.dart';
 import 'driver/driver_dashboard.dart';
 
@@ -21,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -35,23 +35,35 @@ class _LoginPageState extends State<LoginPage> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
                 l10n.select,
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMain,
                 ),
               ),
               const SizedBox(height: 16),
@@ -73,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                 provider,
                 context,
               ),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -86,15 +99,40 @@ class _LoginPageState extends State<LoginPage> {
     LocaleProvider provider,
     BuildContext context,
   ) {
-    return ListTile(
-      title: Text(title),
-      trailing: provider.locale == locale
-          ? const Icon(Icons.check, color: AppColors.primary)
-          : null,
+    bool isSelected = provider.locale == locale;
+    return InkWell(
       onTap: () {
         provider.setLocale(locale);
         Navigator.pop(context);
       },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.primary : AppColors.textMain,
+              ),
+            ),
+            const Spacer(),
+            if (isSelected)
+              const Icon(TablerIcons.circle_check_filled, color: AppColors.primary),
+          ],
+        ),
+      ),
     );
   }
 
@@ -104,192 +142,169 @@ class _LoginPageState extends State<LoginPage> {
     final provider = Provider.of<LocaleProvider>(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Navy Header Background
-          Container(
-            height: MediaQuery.of(context).size.height * 0.4,
-            decoration: const BoxDecoration(
-              color: AppColors.govNavy,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(60),
-                bottomRight: Radius.circular(60),
-              ),
-            ),
-          ),
-
-          // Search Language Button
-          Positioned(
-            top: 50,
-            right: 20,
-            child: TextButton.icon(
-              onPressed: () => _showLanguageSelector(context),
-              icon: const Icon(
-                Icons.language_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-              label: Text(
-                provider.locale.languageCode == 'en'
-                    ? 'English'
-                    : provider.locale.languageCode == 'uz'
-                    ? 'O\'zbekcha'
-                    : 'Русский',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                children: [
-                  const SizedBox(height: 60),
-                  // Emblem / Logo
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_rounded,
-                      size: 50,
-                      color: AppColors.govNavy,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'PORTALGA KIRISH',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Text(
-                    'O\'ZBEKISTON RESPUBLIKASI',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1.5,
-                      color: Colors.white70,
-                    ),
-                  ),
-
-                  const SizedBox(height: 50),
-
-                  // Login Card
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 30,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
-                      border: Border.all(color: Colors.grey.shade100),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tizimga kirish',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.govNavy,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 20),
+                      // Language Switcher
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: TextButton.icon(
+                          onPressed: () => _showLanguageSelector(context),
+                          icon: const Icon(TablerIcons.language, size: 20),
+                          label: Text(
+                            provider.locale.languageCode == 'en'
+                                ? 'EN'
+                                : provider.locale.languageCode == 'uz'
+                                    ? 'UZ'
+                                    : 'RU',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textMain,
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(100),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 24),
-
-                        // Form Fields
-                        _buildFormField(
-                          controller: _emailController,
-                          label: 'Foydalanuvchi nomi',
-                          icon: Icons.person_outline_rounded,
+                      ),
+                      
+                      const Spacer(flex: 1),
+                      
+                      // Hero Section
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            TablerIcons.shield_check,
+                            size: 64,
+                            color: AppColors.primary,
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        _buildFormField(
-                          controller: _passwordController,
-                          label: 'Parol',
-                          icon: Icons.lock_outline_rounded,
-                          isPassword: true,
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'Xush kelibsiz',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textMain,
+                          letterSpacing: -0.5,
                         ),
-
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tizimga kirish uchun ma\'lumotlarni kiriting',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textSecondary.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 48),
+                      
+                      // Input Fields
+                      _buildTextField(
+                        controller: _emailController,
+                        hint: 'Foydalanuvchi nomi',
+                        icon: TablerIcons.user,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _passwordController,
+                        hint: 'Parol',
+                        icon: TablerIcons.lock,
+                        isPassword: true,
+                        obscure: _obscurePassword,
+                        onTogglePassword: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Remember me & Forgot Password
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () => setState(() => _rememberMe = !_rememberMe),
+                            child: Row(
                               children: [
-                                SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: AppColors.govNavy,
-                                    onChanged: (v) =>
-                                        setState(() => _rememberMe = v!),
-                                  ),
+                                Icon(
+                                  _rememberMe ? TablerIcons.square_check_filled : TablerIcons.square,
+                                  color: _rememberMe ? AppColors.primary : AppColors.textSecondary,
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
+                                Text(
                                   'Eslab qolish',
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                    color: _rememberMe ? AppColors.textMain : AppColors.textSecondary,
+                                    fontWeight: _rememberMe ? FontWeight.w600 : FontWeight.w400,
                                   ),
                                 ),
                               ],
                             ),
-                            TextButton(
-                              onPressed: () {},
-                              child: const Text(
-                                'Parolni unutdingizmi?',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.govNavy,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text(
+                              'Parol tiklash',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
                               ),
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // Login Button
-                        Consumer<AppProvider>(
-                          builder: (context, provider, child) {
-                            return ElevatedButton(
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      // Login Button
+                      Consumer<AppProvider>(
+                        builder: (context, provider, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                if (!provider.isLoading)
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                              ],
+                            ),
+                            child: ElevatedButton(
                               onPressed: provider.isLoading
                                   ? null
                                   : () async {
@@ -307,11 +322,11 @@ class _LoginPageState extends State<LoginPage> {
                                       }
                                     },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.govNavy,
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                minimumSize: const Size(double.infinity, 55),
+                                minimumSize: const Size(double.infinity, 64),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
                                 elevation: 0,
                               ),
@@ -325,92 +340,98 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     )
                                   : const Text(
-                                      'KIRISH',
+                                      'Kirish',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-                  // Footer
-                  const Opacity(
-                    opacity: 0.5,
-                    child: Text(
-                      'Monitoring va Hatlov Tizimi\n© 2026 O\'zbekiston Respublikasi',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                        height: 1.5,
+                            ),
+                          );
+                        },
                       ),
-                    ),
+                      
+                      const Spacer(flex: 3),
+                      
+                      // Copyright
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          '© 2026 Monitoring va Hatlov Tizimi\nO\'zbekiston Respublikasi',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildFormField({
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hint,
     required IconData icon,
     bool isPassword = false,
+    bool obscure = false,
+    VoidCallback? onTogglePassword,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.5,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscure,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textMain,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Icon(icon, size: 20, color: AppColors.textSecondary),
+          suffixIcon: isPassword
+              ? IconButton(
+                  onPressed: onTogglePassword,
+                  icon: Icon(
+                    obscure ? TablerIcons.eye : TablerIcons.eye_off,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 20,
           ),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: AppColors.govNavy),
-            fillColor: Colors.grey.shade50,
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: AppColors.govNavy,
-                width: 1.5,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -430,10 +451,20 @@ class _LoginPageState extends State<LoginPage> {
 
   void _showError(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Login yoki parol xato.'),
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(TablerIcons.alert_circle, color: Colors.white),
+            SizedBox(width: 12),
+            Text('Login yoki parol xato.'),
+          ],
+        ),
         backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(24),
       ),
     );
   }
 }
+

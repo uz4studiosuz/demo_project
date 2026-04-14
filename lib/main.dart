@@ -6,8 +6,17 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:beemor/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:beemor/providers/app_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:beemor/services/supabase_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+
   runApp(
     MultiProvider(
       providers: [

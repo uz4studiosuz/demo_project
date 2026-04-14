@@ -55,14 +55,20 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   bool get _isEdit => widget.existing != null;
 
   // ── Joylashuv ────────────────────────────────────────────────────
+  String _propertyType = kHouse; // 'HOUSE' yoki 'APARTMENT'
   String? _tuman;
   String? _qfy;
   String? _mfy;
   String? _street;
   String? _houseNumber;
+  String? _buildingNumber;
+  String? _apartmentNumber;
+  int?    _floor;
   String _officialAddress = '';
   LatLng _position = const LatLng(40.3864, 71.7825);
   bool _isLocationLoading = false;
+  // Mavjud bino kalit (Apartment uchun) — null → yangi lokatsiya
+  String? _copiedFromBuildingKey;
 
   // ── Oila boshlig'i ───────────────────────────────────────────────
   final _headFirstCtrl = TextEditingController();
@@ -100,11 +106,15 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     if (h == null) return;
 
     // Manzil
-    _tuman  = h.tumanName;
-    _qfy    = h.qfyName;
-    _mfy    = h.mfyName;
-    _street = h.streetName;
-    _houseNumber = h.houseNumber;
+    _propertyType   = h.propertyType;
+    _tuman          = h.tumanName;
+    _qfy            = h.qfyName;
+    _mfy            = h.mfyName;
+    _street         = h.streetName;
+    _houseNumber    = h.houseNumber;
+    _buildingNumber = h.buildingNumber;
+    _apartmentNumber = h.apartment;
+    _floor          = h.floor;
     _officialAddress = h.officialAddress;
     _position = LatLng(h.latitude, h.longitude);
 
@@ -184,12 +194,16 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       regionId: 1,
       districtId: 1,
       createdByAgentId: provider.currentUser?.id ?? 0,
-      officialAddress: _officialAddress.isEmpty ? '${_street ?? ''} ${_houseNumber ?? ''}'.trim() : _officialAddress,
+      officialAddress: _officialAddress.isEmpty ? '${_tuman ?? ''}, ${_street ?? ''}'.trim() : _officialAddress,
+      propertyType: _propertyType,
       tumanName: _tuman,
       qfyName: _qfy,
       mfyName: _mfy,
       streetName: _street,
       houseNumber: _houseNumber,
+      buildingNumber: _buildingNumber,
+      apartment: _apartmentNumber,
+      floor: _floor,
       latitude: _position.latitude,
       longitude: _position.longitude,
       createdAt: _isEdit ? widget.existing!.createdAt : DateTime.now(),
@@ -413,99 +427,303 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         children: [
+          // ── Mulk turi tanlash ──────────────────────────────
+          _card(
+            icon: Icons.house_outlined,
+            title: 'Mulk turi',
+            child: _propertyTypeToggle(),
+          ),
+          const SizedBox(height: 12),
+
           _card(
             icon: Icons.location_on_outlined,
             title: 'Hudud ma\'lumotlari',
             child: LocationPickerSection(
+              initialTuman: _tuman,
+              initialMfy: _mfy,
+              initialStreet: _street,
               onAddressChanged: (tuman, qfy, mfy, street, address) {
-                _tuman = tuman;
-                _qfy = qfy;
-                _mfy = mfy;
-                _street = street;
-                _officialAddress = address;
+                setState(() {
+                  _tuman = tuman;
+                  _qfy = qfy;
+                  _mfy = mfy;
+                  _street = street;
+                  _officialAddress = address;
+                });
               },
             ),
           ),
           const SizedBox(height: 12),
 
-          // Uy raqami
+          // ── Uy / Kvartira raqamlari ────────────────────────
           _card(
-            icon: Icons.home_outlined,
-            title: 'Uy raqami',
-            child: _field(
-              label: 'Uy raqami (masalan: 45A)',
-              icon: Icons.home_outlined,
-              keyboardType: TextInputType.text,
-              initial: _houseNumber,
-              onChanged: (v) => _houseNumber = v,
-            ),
+            icon: _propertyType == kHouse ? Icons.home_outlined : Icons.apartment_outlined,
+            title: _propertyType == kHouse ? 'Uy ma\'lumotlari' : 'Kvartira ma\'lumotlari',
+            child: _buildPropertyDetails(),
           ),
           const SizedBox(height: 12),
 
-          // Xarita + GPS
-          _card(
-            icon: Icons.map_outlined,
-            title: 'Geolokatsiya',
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isLocationLoading ? null : _getLocation,
-                        icon: _isLocationLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: AppColors.govNavy))
-                            : const Icon(Icons.my_location,
-                                color: AppColors.govNavy, size: 18),
-                        label: Text(
-                          _isLocationLoading ? 'Aniqlanmoqda...' : 'GPS orqali',
-                          style: const TextStyle(color: AppColors.govNavy),
+          // Geolokatsiya — Kvartira + bino tanlangan bo'lsa lokatsiyani ko'rsatish (o'zgartirish shart emas)
+          if (_propertyType == kApartment && _copiedFromBuildingKey != null)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F2FD),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF1976D2).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: Color(0xFF1976D2), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Lokatsiya binoning manzilidan olindi',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1565C0))),
+                        Text(
+                          '${_position.latitude.toStringAsFixed(5)}, ${_position.longitude.toStringAsFixed(5)}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF1976D2)),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.govNavy),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.govNavy.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${_position.latitude.toStringAsFixed(4)}, ${_position.longitude.toStringAsFixed(4)}',
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    height: 180,
-                    child: MapPreviewPicker(
-                      initialPosition: _position,
-                      onPositionChanged: (p) =>
-                          setState(() => _position = p),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  TextButton(
+                    onPressed: () => setState(() => _copiedFromBuildingKey = null),
+                    child: const Text('O\'zgartirish', style: TextStyle(fontSize: 11, color: Color(0xFF1976D2))),
+                  ),
+                ],
+              ),
+            )
+          else
+            // Xarita + GPS
+            _card(
+              icon: Icons.map_outlined,
+              title: 'Geolokatsiya',
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isLocationLoading ? null : _getLocation,
+                          icon: _isLocationLoading
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.govNavy))
+                              : const Icon(Icons.my_location, color: AppColors.govNavy, size: 18),
+                          label: Text(
+                            _isLocationLoading ? 'Aniqlanmoqda...' : 'GPS orqali',
+                            style: const TextStyle(color: AppColors.govNavy),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.govNavy),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(color: AppColors.govNavy.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(8)),
+                        child: Text(
+                          '${_position.latitude.toStringAsFixed(4)}, ${_position.longitude.toStringAsFixed(4)}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 180,
+                      child: MapPreviewPicker(
+                        initialPosition: _position,
+                        onPositionChanged: (p) => setState(() => _position = p),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  // ── Mulk turi toggle ─────────────────────────────────────────────
+  Widget _propertyTypeToggle() {
+    return Row(
+      children: [
+        _propTypeBtn(kHouse,     Icons.home_outlined,     'Xonadon\n(alohida uy)'),
+        const SizedBox(width: 10),
+        _propTypeBtn(kApartment, Icons.apartment_outlined, 'Kvartira\n(ko\'p qavatli)'),
+      ],
+    );
+  }
+
+  Widget _propTypeBtn(String type, IconData icon, String label) {
+    final active = _propertyType == type;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _propertyType = type;
+          _houseNumber = null;
+          _buildingNumber = null;
+          _apartmentNumber = null;
+          _floor = null;
+          _copiedFromBuildingKey = null; // bino tanlovini tozalash
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: active ? AppColors.govNavy : const Color(0xFFF5F6F8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: active ? AppColors.govNavy : Colors.transparent),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 28, color: active ? Colors.white : AppColors.textSecondary),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                  color: active ? Colors.white : AppColors.textMain,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Mulk turiga qarab maydonlar ──────────────────────────────────
+  Widget _buildPropertyDetails() {
+    if (_propertyType == kHouse) {
+      return _field(
+        label: 'Uy raqami (masalan: 45A)',
+        icon: Icons.home_outlined,
+        initial: _houseNumber,
+        onChanged: (v) => setState(() => _houseNumber = v.isEmpty ? null : v),
+      );
+    } else {
+      // ── Mavjud binoni tanlash (Apartment rejimi) ──
+      final provider = Provider.of<AppProvider>(context, listen: false);
+      final existingBuildings = <String, HouseholdModel>{}; // key -> first apt
+      for (final h in provider.households) {
+        if (h.propertyType != kApartment) continue;
+        if (widget.existing != null && h.id == widget.existing!.id) continue;
+        final key = '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
+        existingBuildings.putIfAbsent(key, () => h);
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mavjud bino tanlov
+          if (existingBuildings.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(children: [
+                    Icon(Icons.info_outline, size: 14, color: Color(0xFF388E3C)),
+                    SizedBox(width: 6),
+                    Text('Mavjud binoni tanlang (lokatsiyani qaytadan kiritmang)',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF388E3C), fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _copiedFromBuildingKey,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      hintText: 'Bino tanlang...',
+                      hintStyle: const TextStyle(fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('Yangi bino (yangi lokatsiya)')),
+                      ...existingBuildings.entries.map((e) {
+                        final h = e.value;
+                        return DropdownMenuItem<String>(
+                          value: e.key,
+                          child: Text(
+                            '${h.buildingNumber ?? "?"}-bino | ${h.streetName ?? h.officialAddress}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }),
+                    ],
+                    onChanged: (key) {
+                      setState(() => _copiedFromBuildingKey = key);
+                      if (key != null && existingBuildings.containsKey(key)) {
+                        final src = existingBuildings[key]!;
+                        setState(() {
+                          _position = LatLng(src.latitude, src.longitude);
+                          _buildingNumber = src.buildingNumber;
+                          // Address ma'lumotlarini ham ko'chirish
+                          _tuman = src.tumanName;
+                          _qfy = src.qfyName;
+                          _mfy = src.mfyName;
+                          _street = src.streetName;
+                          _officialAddress = src.officialAddress;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Qavat va kvartira raqamlari
+          Row(
+            children: [
+              Expanded(
+                child: _field(
+                  label: 'Bino raqami',
+                  icon: Icons.apartment_outlined,
+                  initial: _buildingNumber,
+                  onChanged: (v) => setState(() => _buildingNumber = v.isEmpty ? null : v),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _field(
+                  label: 'Qavat',
+                  icon: Icons.stairs_outlined,
+                  keyboardType: TextInputType.number,
+                  initial: _floor?.toString(),
+                  onChanged: (v) => setState(() => _floor = int.tryParse(v)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _field(
+            label: 'Kvartira raqami',
+            icon: Icons.door_front_door_outlined,
+            initial: _apartmentNumber,
+            onChanged: (v) => setState(() => _apartmentNumber = v.isEmpty ? null : v),
+          ),
+        ],
+      );
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════

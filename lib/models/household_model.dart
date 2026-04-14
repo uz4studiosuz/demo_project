@@ -1,7 +1,11 @@
 import 'resident_model.dart';
 
+/// Mulk turi: 'HOUSE' = xonadon (alohida uy), 'APARTMENT' = kvartira (ko'p qavatli)
+const kHouse     = 'HOUSE';
+const kApartment  = 'APARTMENT';
+
 class HouseholdModel {
-  final int id; // Changed from BigInt since Dart standard int handles 64-bit natively usually, but for parsing we can just use int
+  final int id;
   final int regionId;
   final int districtId;
   final int? branchId;
@@ -9,12 +13,15 @@ class HouseholdModel {
   final String? cadastralNumber;
   final String officialAddress;
   final String? houseNumber;
-  final String? apartment;
+  final String? apartment;      // Kvartira raqami (faqat APARTMENT uchun)
+  final String? buildingNumber; // Bino raqami (faqat APARTMENT uchun)
+  final int? floor;             // Qavat (faqat APARTMENT uchun)
   final String? landmark;
   final double latitude;
   final double longitude;
   final bool isVerified;
   final bool isActive;
+  final String propertyType;   // 'HOUSE' yoki 'APARTMENT'
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -36,11 +43,14 @@ class HouseholdModel {
     required this.officialAddress,
     this.houseNumber,
     this.apartment,
+    this.buildingNumber,
+    this.floor,
     this.landmark,
     required this.latitude,
     required this.longitude,
     this.isVerified = false,
     this.isActive = true,
+    this.propertyType = kHouse,
     required this.createdAt,
     required this.updatedAt,
     this.residents = const [],
@@ -61,11 +71,14 @@ class HouseholdModel {
       officialAddress: json['official_address'] ?? '',
       houseNumber: json['house_number'],
       apartment: json['apartment'],
+      buildingNumber: json['building_number'],
+      floor: json['floor'] is int ? json['floor'] : int.tryParse(json['floor']?.toString() ?? ''),
       landmark: json['landmark'],
       latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude'].toString()) ?? 0.0,
       longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude'].toString()) ?? 0.0,
       isVerified: json['is_verified'] ?? false,
       isActive: json['is_active'] ?? true,
+      propertyType: json['property_type'] ?? kHouse,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
       residents: json['residents'] != null 
@@ -89,11 +102,14 @@ class HouseholdModel {
       'official_address': officialAddress,
       if (houseNumber != null) 'house_number': houseNumber,
       if (apartment != null) 'apartment': apartment,
+      if (buildingNumber != null) 'building_number': buildingNumber,
+      if (floor != null) 'floor': floor,
       if (landmark != null) 'landmark': landmark,
       'latitude': latitude,
       'longitude': longitude,
       'is_verified': isVerified,
       'is_active': isActive,
+      'property_type': propertyType,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'residents': residents.map((r) => r.toJson()).toList(),

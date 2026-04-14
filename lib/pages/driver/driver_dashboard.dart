@@ -185,11 +185,10 @@ class _DriverDashboardState extends State<DriverDashboard>
     final provider = Provider.of<AppProvider>(context);
     final user = provider.currentUser;
 
-    // Tab 0 = Drill-down home, Tab 1 = Map, Tab 2 = Notifications, Tab 3 = Profile
+    // Tab 0 = Drill-down home, Tab 1 = Settings, Tab 2 = Profile
     final pages = [
       _buildHomePage(provider, user?.fullName ?? 'Haydovchi'),
-      const DriverMapPlaceholder(),
-      const _NotificationsPage(),
+      const _SettingsPage(),
       _buildProfilePage(user?.fullName ?? 'Haydovchi'),
     ];
 
@@ -286,7 +285,7 @@ class _DriverDashboardState extends State<DriverDashboard>
     );
   }
 
-  // ─── PROFILE PAGE (tab 3) ────────────────────────────────────────
+  // ─── PROFILE PAGE (tab 2) ────────────────────────────────────────
   Widget _buildProfilePage(String name) {
     return SafeArea(
       child: Center(
@@ -943,8 +942,7 @@ class _DriverDashboardState extends State<DriverDashboard>
       ),
       items: const [
         LiquidGlassBarItem(iconData: Icons.search_rounded,              label: 'Qidiruv'),
-        LiquidGlassBarItem(iconData: Icons.map_outlined,                label: 'Xarita'),
-        LiquidGlassBarItem(iconData: Icons.notifications_none_rounded,  label: 'Bildirish'),
+        LiquidGlassBarItem(iconData: Icons.settings_outlined,            label: 'Sozlamalar'),
         LiquidGlassBarItem(iconData: Icons.person_outline_rounded,      label: 'Profil'),
       ],
     );
@@ -1268,71 +1266,51 @@ class _HouseholdDetailSheet extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  MAP PLACEHOLDER (Tab 1)
+//  SETTINGS PAGE (Tab 1)
 // ═══════════════════════════════════════════════════════════════════════════
 
-class DriverMapPlaceholder extends StatelessWidget {
-  const DriverMapPlaceholder({super.key});
+class _SettingsPage extends StatelessWidget {
+  const _SettingsPage();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF5F6F8),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.map_outlined, size: 56, color: AppColors.govNavy),
-            SizedBox(height: 16),
-            Text(
-              'Xarita',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.govNavy),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Tez orada',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  NOTIFICATIONS PAGE (Tab 2)
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _NotificationsPage extends StatelessWidget {
-  const _NotificationsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF5F6F8),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F6F8),
       body: SafeArea(
-        child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.notifications_none_rounded,
-                  size: 56, color: AppColors.govNavy),
-              SizedBox(height: 16),
-              Text(
-                'Bildirishnomalar',
+              const Text(
+                'Sozlamalar',
                 style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.govNavy),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.govNavy,
+                ),
               ),
-              SizedBox(height: 6),
-              Text(
-                'Hozircha bildirishnomalar yo\'q',
-                style: TextStyle(color: AppColors.textSecondary),
+              const SizedBox(height: 24),
+              _buildSettingItem(
+                icon: Icons.language_rounded,
+                title: 'Tilni o\'zgartirish',
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.dark_mode_outlined,
+                title: 'Tungi rejim',
+                trailing: Switch(value: false, onChanged: (v) {}),
+              ),
+              _buildSettingItem(
+                icon: Icons.notifications_none_rounded,
+                title: 'Bildirishnomalar',
+                onTap: () {},
+              ),
+              const SizedBox(height: 12),
+              _buildSettingItem(
+                icon: Icons.info_outline_rounded,
+                title: 'Ilova haqida',
+                onTap: () {},
               ),
             ],
           ),
@@ -1340,4 +1318,42 @@ class _NotificationsPage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.govNavy.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.govNavy, size: 20),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        trailing: trailing ?? const Icon(Icons.chevron_right, size: 20, color: AppColors.textSecondary),
+      ),
+    );
+  }
 }
+
