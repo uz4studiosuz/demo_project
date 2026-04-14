@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
 import '../models/user_role.dart';
@@ -7,6 +9,8 @@ import '../models/user_model.dart';
 import '../services/supabase_service.dart';
 
 class AppProvider extends ChangeNotifier {
+  static const String _kUserKey = 'saved_user_data';
+
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
 
@@ -20,6 +24,33 @@ class AppProvider extends ChangeNotifier {
 
   List<HouseholdModel> _households = [];
   List<HouseholdModel> get households => _households;
+
+  /// Ilova ishga tushganda saqlangan session bormi tekshiradi
+  Future<void> loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(_kUserKey);
+    if (userJson != null) {
+      try {
+        _currentUser = UserModel.fromJson(jsonDecode(userJson));
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Session yuklashda xato: $e');
+        await prefs.remove(_kUserKey);
+      }
+    }
+  }
+
+  /// Sessionni keshga saqlash
+  Future<void> _saveSession(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUserKey, jsonEncode(user.toJson()));
+  }
+
+  /// Sessionni tozalash
+  Future<void> _clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kUserKey);
+  }
 
   // ─────────────────────────────────────────────────────────────────
   //  AUTH
@@ -35,6 +66,7 @@ class AppProvider extends ChangeNotifier {
       final user = await SupabaseService.login(username, password);
       if (user != null) {
         _currentUser = user;
+        await _saveSession(user);
         _isLoading = false;
         notifyListeners();
         return true;
@@ -57,10 +89,11 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
-  void logout() {
+  void logout() async {
     _currentUser = null;
     _households = [];
     _errorMessage = null;
+    await _clearSession();
     notifyListeners();
   }
 

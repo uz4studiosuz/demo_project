@@ -4,7 +4,7 @@ import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:provider/provider.dart';
 import '../theme/colors.dart';
 import '../utils/locale_provider.dart';
-import '../models/user_role.dart';
+
 import '../providers/app_provider.dart';
 import 'surveyor/surveyor_dashboard.dart';
 import 'driver/driver_dashboard.dart';
@@ -138,7 +138,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final provider = Provider.of<LocaleProvider>(context);
 
     return Scaffold(

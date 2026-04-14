@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
 import '../models/user_model.dart';
-import '../models/user_role.dart';
 
 class SupabaseService {
   static final SupabaseClient _db = Supabase.instance.client;
