@@ -369,7 +369,35 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                       ),
-
+                      const SizedBox(height: 24),
+                      // Quick Login (Demo)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickLoginBtn(
+                              context: context,
+                              label: 'Xatlovchi',
+                              username: 'surveyor1',
+                              password: '1234',
+                              icon: TablerIcons.clipboard_list,
+                              color: const Color(0xFFE3F2FD),
+                              iconColor: Colors.blue.shade700,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuickLoginBtn(
+                              context: context,
+                              label: 'Haydovchi',
+                              username: 'driver1',
+                              password: '1234',
+                              icon: TablerIcons.ambulance,
+                              color: const Color(0xFFE8F5E9),
+                              iconColor: Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
                       const Spacer(flex: 3),
 
                       // Copyright
@@ -482,6 +510,55 @@ class _LoginPageState extends State<LoginPage> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(24),
+      ),
+    );
+  }
+
+  Widget _buildQuickLoginBtn({
+    required BuildContext context,
+    required String label,
+    required String username,
+    required String password,
+    required IconData icon,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return InkWell(
+      onTap: () async {
+        _emailController.text = username;
+        _passwordController.text = password;
+        final provider = Provider.of<AppProvider>(context, listen: false);
+        bool success = await provider.login(username, password);
+        if (context.mounted) {
+          if (success) {
+            _navigateToDashboard(provider);
+          } else {
+            _showError(context);
+          }
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: iconColor.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: iconColor, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: iconColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
