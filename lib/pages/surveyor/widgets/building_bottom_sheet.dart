@@ -58,25 +58,14 @@ class BuildingBottomSheet {
             Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF37474F), Color(0xFF263238)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.apartment,
-                    color: Colors.white,
-                    size: 24,
+                    Icons.location_city,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -85,13 +74,26 @@ class BuildingBottomSheet {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${apartments.first.officialAddress}\n${apartments.first.buildingNumber ?? "?"}–bino',
+                        '${apartments.first.buildingNumber ?? "?"}–bino',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textMain,
                         ),
                       ),
+                      if (apartments.first.mfyName != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${apartments.first.tumanName ?? ''} | ${apartments.first.mfyName} | ${apartments.first.streetName ?? ''}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
                       Text(
                         'Jami ${apartments.length} ta xonadon ro\'yxatga olingan',
                         style: const TextStyle(
