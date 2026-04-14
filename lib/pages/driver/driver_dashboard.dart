@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
 import '../../theme/colors.dart';
 import '../login.dart';
-import 'driver_map_page.dart';
+import 'widgets/nav_optionsheet.dart';
+import 'widgets/household_setailsheet.dart';
 import 'driver_search_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -24,13 +23,16 @@ class _HouseOrBuilding {
   final HouseholdModel? house;
   final List<HouseholdModel>? apartments;
 
-  _HouseOrBuilding.house(this.house) 
-      : isBuilding = false, 
-        title = (house!.houseNumber != null && house.houseNumber!.trim().isNotEmpty) ? '${house.houseNumber}-uy' : 'Raqamsiz uy', 
-        apartments = null;
-  _HouseOrBuilding.building(this.title, this.apartments) 
-      : isBuilding = true, 
-        house = null;
+  _HouseOrBuilding.house(this.house)
+    : isBuilding = false,
+      title =
+          (house!.houseNumber != null && house.houseNumber!.trim().isNotEmpty)
+          ? '${house.houseNumber}-uy'
+          : 'Raqamsiz uy',
+      apartments = null;
+  _HouseOrBuilding.building(this.title, this.apartments)
+    : isBuilding = true,
+      house = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -114,11 +116,37 @@ class _DriverDashboardState extends State<DriverDashboard>
 
   /// Households for selected Street
   List<HouseholdModel> get _householdsInStreet {
-     return _all.where((h) => 
-       h.tumanName == _selDistrict && 
-       h.mfyName == _selMfy && 
-       h.streetName == _selStreet
-     ).toList();
+    return _all
+        .where(
+          (h) =>
+              h.tumanName == _selDistrict &&
+              h.mfyName == _selMfy &&
+              h.streetName == _selStreet,
+        )
+        .toList();
+  }
+
+  List<_HouseOrBuilding> get _groupedObjectsInStreet {
+    final list = _householdsInStreet;
+    final result = <_HouseOrBuilding>[];
+    final aptGroups = <String, List<HouseholdModel>>{};
+
+    for (final h in list) {
+      if (h.propertyType == 'APARTMENT') {
+        final bNum = h.buildingNumber != null && h.buildingNumber!.isNotEmpty
+            ? h.buildingNumber!
+            : "Noma'lum";
+        aptGroups.putIfAbsent(bNum, () => []).add(h);
+      } else {
+        result.add(_HouseOrBuilding.house(h));
+      }
+    }
+
+    aptGroups.forEach((bNum, apts) {
+      result.add(_HouseOrBuilding.building('$bNum-bino', apts));
+    });
+
+    return result;
   }
 
   /// Households for the deepest selected level (legacy or generic)
@@ -145,9 +173,10 @@ class _DriverDashboardState extends State<DriverDashboard>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _NavOptionsSheet(
+      builder: (_) => NavOptionsSheet(
         household: h,
-        targetResident: r ?? (h.residents.isNotEmpty ? h.residents.first : null),
+        targetResident:
+            r ?? (h.residents.isNotEmpty ? h.residents.first : null),
       ),
     );
   }
@@ -157,10 +186,10 @@ class _DriverDashboardState extends State<DriverDashboard>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => _HouseholdDetailSheet(
+      builder: (_) => HouseholdDetailSheet(
         household: h,
         onNavigate: (r) {
-          Navigator.pop(ctx);
+          Navigator.pop(context);
           _openNav(h, r: r);
         },
       ),
@@ -208,14 +237,13 @@ class _DriverDashboardState extends State<DriverDashboard>
     ];
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F6F8),
         extendBody: true,
-        body: IndexedStack(
-          index: _currentTab,
-          children: pages,
-        ),
+        body: IndexedStack(index: _currentTab, children: pages),
         bottomNavigationBar: _buildBottomNav(),
       ),
     );
@@ -244,7 +272,10 @@ class _DriverDashboardState extends State<DriverDashboard>
               children: [
                 const Text(
                   'Xush kelibsiz',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 Text(
                   name,
@@ -271,7 +302,9 @@ class _DriverDashboardState extends State<DriverDashboard>
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               backgroundColor: AppColors.danger.withValues(alpha: 0.05),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
@@ -308,30 +341,49 @@ class _DriverDashboardState extends State<DriverDashboard>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: AppColors.govNavy.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person, color: AppColors.govNavy, size: 40),
+              child: const Icon(
+                Icons.person,
+                color: AppColors.govNavy,
+                size: 40,
+              ),
             ),
             const SizedBox(height: 16),
-            Text(name,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.govNavy)),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.govNavy,
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text('Haydovchi', style: TextStyle(color: AppColors.textSecondary)),
+            const Text(
+              'Haydovchi',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 32),
             OutlinedButton.icon(
               onPressed: _logout,
               icon: const Icon(Icons.logout, color: AppColors.danger),
-              label: const Text('Chiqish', style: TextStyle(color: AppColors.danger)),
+              label: const Text(
+                'Chiqish',
+                style: TextStyle(color: AppColors.danger),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.danger),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -363,7 +415,8 @@ class _DriverDashboardState extends State<DriverDashboard>
     if (_selDistrict != null) parts.add(_selDistrict!);
     if (_selMfy != null) parts.add(_selMfy!);
     if (_selStreet != null) parts.add(_selStreet!);
-    if (_selHousehold != null) parts.add('№${_selHousehold!.houseNumber ?? _selHousehold!.id}');
+    if (_selHousehold != null)
+      parts.add('№${_selHousehold!.houseNumber ?? _selHousehold!.id}');
 
     return Container(
       color: Colors.white,
@@ -372,7 +425,11 @@ class _DriverDashboardState extends State<DriverDashboard>
         children: [
           IconButton(
             onPressed: _goBack,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.govNavy),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: AppColors.govNavy,
+            ),
             visualDensity: VisualDensity.compact,
           ),
           Expanded(
@@ -436,7 +493,11 @@ class _DriverDashboardState extends State<DriverDashboard>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.tune_rounded, size: 14, color: AppColors.govNavy),
+                    const Icon(
+                      Icons.tune_rounded,
+                      size: 14,
+                      color: AppColors.govNavy,
+                    ),
                     const SizedBox(width: 4),
                     const Text(
                       'Filtr',
@@ -448,7 +509,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -494,13 +555,18 @@ class _DriverDashboardState extends State<DriverDashboard>
           }),
         );
       case _DrillLevel.household:
-        final households = _householdsInStreet;
-        if (households.isEmpty) return _buildResidentList([]);
+        final grouped = _groupedObjectsInStreet;
+        if (grouped.isEmpty) return _buildResidentList([]);
         return _buildHouseholdGrid(
-          title: '${_selStreet} — Xonadonlar',
-          items: households,
-          // ✅ Tap → Bottom Sheet (list emas)
-          onTap: (h) => _openDetails(h),
+          title: '${_selStreet} — Binolar/Xonadonlar',
+          items: grouped,
+          onTap: (item) {
+            if (item.isBuilding) {
+              _showBuildingSheet(context, item.apartments!);
+            } else {
+              _openDetails(item.house!);
+            }
+          },
         );
       case _DrillLevel.residents:
         return _buildResidentList(_levelHouseholds);
@@ -581,13 +647,20 @@ class _DriverDashboardState extends State<DriverDashboard>
     );
   }
 
-  Widget _buildGridItem(String label, IconData icon, void Function(String) onTap) {
+  Widget _buildGridItem(
+    String label,
+    IconData icon,
+    void Function(String) onTap,
+  ) {
     // Count households inside this item
     int count = _all.where((h) {
       if (_level == _DrillLevel.district) return h.tumanName == label;
-      if (_level == _DrillLevel.mfy) return h.tumanName == _selDistrict && h.mfyName == label;
+      if (_level == _DrillLevel.mfy)
+        return h.tumanName == _selDistrict && h.mfyName == label;
       if (_level == _DrillLevel.street) {
-        return h.tumanName == _selDistrict && h.mfyName == _selMfy && h.streetName == label;
+        return h.tumanName == _selDistrict &&
+            h.mfyName == _selMfy &&
+            h.streetName == label;
       }
       return false;
     }).length;
@@ -639,7 +712,9 @@ class _DriverDashboardState extends State<DriverDashboard>
                   count > 0 ? '$count ta xonadon' : 'Ochish →',
                   style: TextStyle(
                     fontSize: 10,
-                    color: count > 0 ? AppColors.textSecondary : AppColors.govNavy,
+                    color: count > 0
+                        ? AppColors.textSecondary
+                        : AppColors.govNavy,
                     fontWeight: count > 0 ? FontWeight.normal : FontWeight.w600,
                   ),
                 ),
@@ -654,8 +729,8 @@ class _DriverDashboardState extends State<DriverDashboard>
   // ─── HOUSEHOLD GRID ─────────────────────────────────────────────
   Widget _buildHouseholdGrid({
     required String title,
-    required List<HouseholdModel> items,
-    required void Function(HouseholdModel) onTap,
+    required List<_HouseOrBuilding> items,
+    required void Function(_HouseOrBuilding) onTap,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,14 +783,12 @@ class _DriverDashboardState extends State<DriverDashboard>
     );
   }
 
-  Widget _buildHouseholdItem(HouseholdModel h, void Function(HouseholdModel) onTap) {
-    // Uy raqamini chiroyli ko'rsatish (45-uy)
-    String houseTitle = h.houseNumber != null && h.houseNumber!.isNotEmpty
-        ? '${h.houseNumber}-uy'
-        : 'Raqamsiz-uy';
-
+  Widget _buildHouseholdItem(
+    _HouseOrBuilding item,
+    void Function(_HouseOrBuilding) onTap,
+  ) {
     return GestureDetector(
-      onTap: () => onTap(h),
+      onTap: () => onTap(item),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -744,10 +817,18 @@ class _DriverDashboardState extends State<DriverDashboard>
                     color: AppColors.govNavy.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.home_work_outlined, color: AppColors.govNavy, size: 20),
+                  child: Icon(
+                    item.isBuilding
+                        ? Icons.apartment
+                        : Icons.home_work_outlined,
+                    color: AppColors.govNavy,
+                    size: 20,
+                  ),
                 ),
                 Text(
-                  'ID: ${h.id}',
+                  item.isBuilding
+                      ? '${item.apartments!.length} xonadon'
+                      : 'ID: ${item.house!.id}',
                   style: TextStyle(
                     fontSize: 9,
                     color: AppColors.textSecondary.withValues(alpha: 0.7),
@@ -760,7 +841,7 @@ class _DriverDashboardState extends State<DriverDashboard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  houseTitle,
+                  item.title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -771,10 +852,17 @@ class _DriverDashboardState extends State<DriverDashboard>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${h.residents.length} nafar aholi',
-                  style: const TextStyle(
+                  item.isBuilding
+                      ? "Bino ko'rinishi →"
+                      : '${item.house!.residents.length} nafar aholi',
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textSecondary,
+                    color: item.isBuilding
+                        ? AppColors.govNavy
+                        : AppColors.textSecondary,
+                    fontWeight: item.isBuilding
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -799,10 +887,16 @@ class _DriverDashboardState extends State<DriverDashboard>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.people_outline_rounded, size: 56, color: AppColors.textSecondary),
+            Icon(
+              Icons.people_outline_rounded,
+              size: 56,
+              color: AppColors.textSecondary,
+            ),
             SizedBox(height: 12),
-            Text('Bu yerda aholisi yo\'q',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text(
+              'Bu yerda aholisi yo\'q',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ],
         ),
       );
@@ -815,11 +909,14 @@ class _DriverDashboardState extends State<DriverDashboard>
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(
             children: [
-              const Text('Aholi ro\'yxati',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textMain)),
+              const Text(
+                'Aholi ro\'yxati',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMain,
+                ),
+              ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -830,9 +927,10 @@ class _DriverDashboardState extends State<DriverDashboard>
                 child: Text(
                   '${rows.length} nafar',
                   style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.govNavy),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.govNavy,
+                  ),
                 ),
               ),
             ],
@@ -864,18 +962,23 @@ class _DriverDashboardState extends State<DriverDashboard>
                   borderRadius: BorderRadius.circular(14),
                   onTap: () => _openDetails(h),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
                         Container(
-                          width: 44, height: 44,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: AppColors.govNavy.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             r.gender == 'FEMALE' ? Icons.woman : Icons.man,
-                            color: AppColors.govNavy, size: 22,
+                            color: AppColors.govNavy,
+                            size: 22,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -883,26 +986,35 @@ class _DriverDashboardState extends State<DriverDashboard>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(r.displayFullName,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      color: AppColors.textMain)),
+                              Text(
+                                r.displayFullName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  color: AppColors.textMain,
+                                ),
+                              ),
                               const SizedBox(height: 3),
                               Text(
                                 '${r.role ?? "Oila a\'zosi"} \u2022 ${h.officialAddress}',
                                 style: const TextStyle(
-                                    fontSize: 11, color: AppColors.textSecondary),
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (r.phonePrimary != null && r.phonePrimary!.isNotEmpty) ...[
+                              if (r.phonePrimary != null &&
+                                  r.phonePrimary!.isNotEmpty) ...[
                                 const SizedBox(height: 2),
-                                Text(r.phonePrimary!,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.govNavy,
-                                        fontWeight: FontWeight.w500)),
+                                Text(
+                                  r.phonePrimary!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.govNavy,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -911,13 +1023,17 @@ class _DriverDashboardState extends State<DriverDashboard>
                         GestureDetector(
                           onTap: () => _openNav(h, r: r),
                           child: Container(
-                            width: 40, height: 40,
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
                               color: AppColors.govNavy.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.directions_car_rounded,
-                                color: AppColors.govNavy, size: 20),
+                            child: const Icon(
+                              Icons.directions_car_rounded,
+                              color: AppColors.govNavy,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
@@ -933,13 +1049,19 @@ class _DriverDashboardState extends State<DriverDashboard>
   }
 
   // ─── BUILDING BOTTOM SHEET ────────────────────────────────────────
-  void _showBuildingSheet(BuildContext context, List<HouseholdModel> apartments) {
+
+  // ─── BUILDING BOTTOM SHEET ────────────────────────────────────────
+  void _showBuildingSheet(
+    BuildContext context,
+    List<HouseholdModel> apartments,
+  ) {
     final floorsMap = <int, List<HouseholdModel>>{};
     for (final apt in apartments) {
       final f = apt.floor ?? 0;
       floorsMap.putIfAbsent(f, () => []).add(apt);
     }
-    final sortedFloors = floorsMap.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedFloors = floorsMap.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
 
     showModalBottomSheet(
       context: context,
@@ -950,35 +1072,79 @@ class _DriverDashboardState extends State<DriverDashboard>
           color: Color(0xFFF8F9FA),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 20),
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          MediaQuery.of(context).padding.bottom + 20,
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            Row(children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF37474F), Color(0xFF263238)]),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))],
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF37474F), Color(0xFF263238)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.apartment,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                child: const Icon(Icons.apartment, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${apartments.first.buildingNumber ?? "?"}–bino',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
-                Text("Jami ${apartments.length} ta xonadon ro'yxatga olingan",
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              ])),
-            ]),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${apartments.first.buildingNumber ?? "?"}–bino',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMain,
+                        ),
+                      ),
+                      Text(
+                        "Jami ${apartments.length} ta xonadon ro'yxatga olingan",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
@@ -989,7 +1155,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                 itemBuilder: (context, i) {
                   final floor = sortedFloors[i];
                   final apts = floorsMap[floor]!;
-                  
+
                   apts.sort((a, b) {
                     final numA = int.tryParse(a.apartment ?? '') ?? 0;
                     final numB = int.tryParse(b.apartment ?? '') ?? 0;
@@ -1003,7 +1169,11 @@ class _DriverDashboardState extends State<DriverDashboard>
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.grey.shade200),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
                     child: IntrinsicHeight(
@@ -1014,17 +1184,31 @@ class _DriverDashboardState extends State<DriverDashboard>
                             width: 56,
                             decoration: BoxDecoration(
                               color: AppColors.govNavy.withValues(alpha: 0.05),
-                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                              border: Border(right: BorderSide(color: Colors.grey.shade100)),
+                              borderRadius: const BorderRadius.horizontal(
+                                left: Radius.circular(16),
+                              ),
+                              border: Border(
+                                right: BorderSide(color: Colors.grey.shade100),
+                              ),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   floor == 0 ? '?' : '$floor',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.govNavy),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                    color: AppColors.govNavy,
+                                  ),
                                 ),
-                                const Text('qavat', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                const Text(
+                                  'qavat',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1033,52 +1217,93 @@ class _DriverDashboardState extends State<DriverDashboard>
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Column(
                                 children: apts.map((apt) {
-                                  final head = apt.residents.isNotEmpty ? apt.residents.first : null;
+                                  final head = apt.residents.isNotEmpty
+                                      ? apt.residents.first
+                                      : null;
                                   final hasHead = head != null;
-                                  
+
                                   return InkWell(
                                     onTap: () {
                                       Navigator.pop(context);
                                       _openDetails(apt);
                                     },
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
                                       child: Row(
                                         children: [
                                           Container(
-                                            width: 38, height: 38,
+                                            width: 38,
+                                            height: 38,
                                             decoration: BoxDecoration(
-                                              color: hasHead ? const Color(0xFFF1F8E9) : const Color(0xFFF5F6F8),
-                                              border: Border.all(color: hasHead ? const Color(0xFFAED581).withValues(alpha: 0.5) : Colors.grey.shade300),
-                                              borderRadius: BorderRadius.circular(8),
+                                              color: hasHead
+                                                  ? const Color(0xFFF1F8E9)
+                                                  : const Color(0xFFF5F6F8),
+                                              border: Border.all(
+                                                color: hasHead
+                                                    ? const Color(
+                                                        0xFFAED581,
+                                                      ).withValues(alpha: 0.5)
+                                                    : Colors.grey.shade300,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Center(
                                               child: Text(
                                                 apt.apartment ?? '?',
-                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, 
-                                                    color: hasHead ? const Color(0xFF33691E) : AppColors.textMain),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                  color: hasHead
+                                                      ? const Color(0xFF33691E)
+                                                      : AppColors.textMain,
+                                                ),
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  hasHead ? '${head.lastName} ${head.firstName}' : "Ma'lumot kiritilmagan",
-                                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                                                      color: hasHead ? AppColors.textMain : AppColors.textSecondary),
+                                                  hasHead
+                                                      ? '${head.lastName} ${head.firstName}'
+                                                      : "Ma'lumot kiritilmagan",
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: hasHead
+                                                        ? AppColors.textMain
+                                                        : AppColors
+                                                              .textSecondary,
+                                                  ),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
-                                                  hasHead ? '${apt.residents.length} nafar aholi' : "Bo'sh xonadon",
-                                                  style: TextStyle(fontSize: 11, color: hasHead ? AppColors.textSecondary : Colors.grey.shade400),
+                                                  hasHead
+                                                      ? '${apt.residents.length} nafar aholi'
+                                                      : "Bo'sh xonadon",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: hasHead
+                                                        ? AppColors
+                                                              .textSecondary
+                                                        : Colors.grey.shade400,
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                                          const Icon(
+                                            Icons.chevron_right,
+                                            color: AppColors.textSecondary,
+                                            size: 18,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -1124,326 +1349,16 @@ class _DriverDashboardState extends State<DriverDashboard>
         ),
       ),
       items: const [
-        LiquidGlassBarItem(iconData: Icons.search_rounded,              label: 'Qidiruv'),
-        LiquidGlassBarItem(iconData: Icons.settings_outlined,            label: 'Sozlamalar'),
-        LiquidGlassBarItem(iconData: Icons.person_outline_rounded,      label: 'Profil'),
-      ],
-    );
-  }
-}
-
-
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  NAVIGATION OPTIONS SHEET
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _NavOptionsSheet extends StatelessWidget {
-  final HouseholdModel household;
-  final ResidentModel? targetResident;
-  const _NavOptionsSheet({required this.household, this.targetResident});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Yo\'nalish usulini tanlang',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: AppColors.govNavy,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            household.officialAddress,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 16),
-          _option(
-            context,
-            icon: Icons.map_rounded,
-            color: AppColors.govNavy,
-            title: 'Ilova ichida navigatsiya',
-            sub: 'Marshrut va yo\'nalish ko\'rsatmalar',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DriverMapPage(
-                    destination: LatLng(household.latitude, household.longitude),
-                    addressTitle: household.officialAddress,
-                    household: household,
-                    targetResident: targetResident,
-                  ),
-                ),
-              );
-            },
-          ),
-          const Divider(height: 1),
-          _option(
-            context,
-            icon: Icons.location_on_rounded,
-            color: Colors.red,
-            title: 'Google Maps',
-            sub: 'Tashqi ilovada ochish',
-            onTap: () async {
-              Navigator.pop(context);
-              final url = Uri.parse(
-                'https://www.google.com/maps/dir/?api=1&destination=${household.latitude},${household.longitude}&travelmode=driving',
-              );
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              }
-            },
-          ),
-          const Divider(height: 1),
-          _option(
-            context,
-            icon: Icons.navigation_rounded,
-            color: Colors.amber.shade700,
-            title: 'Yandex Navigator',
-            sub: 'Tashqi ilovada ochish',
-            onTap: () async {
-              Navigator.pop(context);
-              final url = Uri.parse(
-                'yandexnavi://build_route_on_map?lat_to=${household.latitude}&lon_to=${household.longitude}',
-              );
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              } else {
-                final fb = Uri.parse(
-                  'https://yandex.com/maps/?rtext=~${household.latitude},${household.longitude}',
-                );
-                if (await canLaunchUrl(fb)) {
-                  await launchUrl(fb, mode: LaunchMode.externalApplication);
-                }
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _option(
-    BuildContext context, {
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String sub,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 4),
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+        LiquidGlassBarItem(iconData: Icons.search_rounded, label: 'Qidiruv'),
+        LiquidGlassBarItem(
+          iconData: Icons.settings_outlined,
+          label: 'Sozlamalar',
         ),
-        child: Icon(icon, color: color, size: 22),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-      subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-      onTap: onTap,
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  HOUSEHOLD DETAIL SHEET
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _HouseholdDetailSheet extends StatelessWidget {
-  final HouseholdModel household;
-  final void Function(ResidentModel?) onNavigate;
-  const _HouseholdDetailSheet({required this.household, required this.onNavigate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.72,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.govNavy.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.home_work_outlined, color: AppColors.govNavy, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        household.officialAddress.isEmpty ? 'Manzilsiz' : household.officialAddress,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: AppColors.textMain,
-                        ),
-                      ),
-                      Text(
-                        [household.tumanName, household.mfyName, household.streetName]
-                            .where((e) => e != null && e.isNotEmpty)
-                            .join(' • '),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 24),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Row(
-              children: [
-                const Text(
-                  'Oila a\'zolari',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.govNavy),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.govNavy.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${household.residents.length} nafar',
-                    style: const TextStyle(
-                      color: AppColors.govNavy,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: household.residents.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (_, i) {
-                final r = household.residents[i];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F3FA),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      r.gender == 'FEMALE' ? Icons.woman : Icons.man,
-                      color: AppColors.textSecondary,
-                      size: 22,
-                    ),
-                  ),
-                  title: Text(
-                    r.displayFullName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    [r.role, r.phonePrimary]
-                        .where((e) => e != null && e!.isNotEmpty)
-                        .join(' • '),
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                  ),
-                  trailing: Material(
-                    color: AppColors.govNavy.withValues(alpha: 0.07),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => onNavigate(r),
-                      child: const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Icon(Icons.directions_car_rounded, color: AppColors.govNavy, size: 18),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () => onNavigate(
-                    household.residents.isNotEmpty ? household.residents.first : null),
-                icon: const Icon(Icons.navigation_rounded, size: 20),
-                label: const Text(
-                  'Yo\'nalish olish',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.govNavy,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        LiquidGlassBarItem(
+          iconData: Icons.person_outline_rounded,
+          label: 'Profil',
+        ),
+      ],
     );
   }
 }
@@ -1534,9 +1449,14 @@ class _SettingsPage extends StatelessWidget {
           title,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
-        trailing: trailing ?? const Icon(Icons.chevron_right, size: 20, color: AppColors.textSecondary),
+        trailing:
+            trailing ??
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
       ),
     );
   }
 }
-

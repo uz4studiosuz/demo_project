@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
 import '../../theme/colors.dart';
 import 'widgets/map_preview_picker.dart';
 import 'widgets/location_picker_section.dart';
+import 'full_screen_map_picker.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  ADD / EDIT FAMILY PAGE  —  Step-by-step UX, gobierno stili
@@ -28,23 +28,33 @@ class AddFamilyPage extends StatefulWidget {
 class _Member {
   final TextEditingController firstCtrl;
   final TextEditingController lastCtrl;
+  final TextEditingController middleCtrl;
   final TextEditingController phoneCtrl;
+  bool showPhone;
   String gender;
   String role;
 
   _Member({
     String firstName = '',
     String lastName = '',
+    String middleName = '',
     String phone = '',
+    this.showPhone = false,
     this.gender = 'MALE',
     this.role = 'Turmush o\'rtog\'i',
   })  : firstCtrl = TextEditingController(text: firstName),
         lastCtrl = TextEditingController(text: lastName),
-        phoneCtrl = TextEditingController(text: phone);
+        middleCtrl = TextEditingController(text: middleName),
+        phoneCtrl = TextEditingController(text: phone.isEmpty ? '+998 ' : phone) {
+    if (phone.isNotEmpty && phone != '+998 ') {
+      showPhone = true;
+    }
+  }
 
   void dispose() {
     firstCtrl.dispose();
     lastCtrl.dispose();
+    middleCtrl.dispose();
     phoneCtrl.dispose();
   }
 }
@@ -66,14 +76,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   int?    _floor;
   String _officialAddress = '';
   LatLng _position = const LatLng(40.3864, 71.7825);
-  bool _isLocationLoading = false;
   // Mavjud bino kalit (Apartment uchun) — null → yangi lokatsiya
   String? _copiedFromBuildingKey;
 
   // ── Oila boshlig'i ───────────────────────────────────────────────
   final _headFirstCtrl = TextEditingController();
   final _headLastCtrl  = TextEditingController();
-  final _headPhoneCtrl = TextEditingController();
+  final _headMiddleCtrl = TextEditingController();
+  final _headPhoneCtrl = TextEditingController(text: '+998 ');
   String _headGender   = 'MALE';
 
   // ── Qo'shimcha a'zolar ───────────────────────────────────────────
@@ -124,7 +134,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       final head = residents.first;
       _headFirstCtrl.text = head.firstName;
       _headLastCtrl.text  = head.lastName;
-      _headPhoneCtrl.text = head.phonePrimary ?? '';
+      _headMiddleCtrl.text = head.middleName ?? '';
+      _headPhoneCtrl.text = (head.phonePrimary == null || head.phonePrimary!.isEmpty) ? '+998 ' : head.phonePrimary!;
       _headGender          = head.gender;
     }
 
@@ -134,6 +145,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       _members.add(_Member(
         firstName: r.firstName,
         lastName:  r.lastName,
+        middleName: r.middleName ?? '',
         phone:     r.phonePrimary ?? '',
         gender:    r.gender,
         role:      r.role ?? 'Boshqa',
@@ -145,35 +157,24 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   void dispose() {
     _headFirstCtrl.dispose();
     _headLastCtrl.dispose();
+    _headMiddleCtrl.dispose();
     _headPhoneCtrl.dispose();
     for (final m in _members) m.dispose();
     super.dispose();
   }
 
-  // ─── GPS auto-fill ────────────────────────────────────────────────
-  Future<void> _getLocation() async {
-    setState(() => _isLocationLoading = true);
-    try {
-      final svc = await Geolocator.isLocationServiceEnabled();
-      if (!svc) {
-        if (mounted) _snack('Joylashuv xizmati o\'chirilgan');
-        return;
-      }
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
-        if (mounted) _snack('Joylashuvga ruxsat berilmadi');
-        return;
-      }
-      final pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
-      setState(() => _position = LatLng(pos.latitude, pos.longitude));
-    } catch (e) {
-      if (mounted) _snack('Xatolik: $e');
-    } finally {
-      if (mounted) setState(() => _isLocationLoading = false);
+  Future<void> _openFullScreenMap() async {
+    final LatLng? result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenMapPicker(
+          initialPosition: _position,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      if (mounted) setState(() => _position = result);
     }
   }
 
@@ -181,7 +182,13 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   Future<void> _save() async {
     // Validation
     if (_headFirstCtrl.text.trim().isEmpty || _headLastCtrl.text.trim().isEmpty) {
-      _snack('Oila boshlig\'i ismini kiriting');
+      _snack('Oila boshlig\'i ismi va familiyasini kiriting');
+      setState(() => _step = 1);
+      return;
+    }
+    final hp = _headPhoneCtrl.text.trim();
+    if (hp == '+998' || hp.isEmpty) {
+      _snack('Oila boshlig\'i telefon raqamini kiriting');
       setState(() => _step = 1);
       return;
     }
@@ -218,7 +225,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         householdId: household.id,
         firstName: _headFirstCtrl.text.trim(),
         lastName: _headLastCtrl.text.trim(),
-        phonePrimary: _headPhoneCtrl.text.trim().isEmpty ? null : _headPhoneCtrl.text.trim(),
+        middleName: _headMiddleCtrl.text.trim().isEmpty ? null : _headMiddleCtrl.text.trim(),
+        phonePrimary: _headPhoneCtrl.text.trim() == '+998' ? null : _headPhoneCtrl.text.trim(),
         gender: _headGender,
         role: 'Oila boshlig\'i',
         createdAt: DateTime.now(),
@@ -229,7 +237,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         householdId: household.id,
         firstName: m.firstCtrl.text.trim(),
         lastName: m.lastCtrl.text.trim(),
-        phonePrimary: m.phoneCtrl.text.trim().isEmpty ? null : m.phoneCtrl.text.trim(),
+        middleName: m.middleCtrl.text.trim().isEmpty ? null : m.middleCtrl.text.trim(),
+        phonePrimary: (m.phoneCtrl.text.trim() == '+998' || !m.showPhone) ? null : m.phoneCtrl.text.trim(),
         gender: m.gender,
         role: m.role,
         createdAt: DateTime.now(),
@@ -507,13 +516,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _isLocationLoading ? null : _getLocation,
-                          icon: _isLocationLoading
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.govNavy))
-                              : const Icon(Icons.my_location, color: AppColors.govNavy, size: 18),
-                          label: Text(
-                            _isLocationLoading ? 'Aniqlanmoqda...' : 'GPS orqali',
-                            style: const TextStyle(color: AppColors.govNavy),
+                          onPressed: _openFullScreenMap,
+                          icon: const Icon(Icons.map, color: AppColors.govNavy, size: 18),
+                          label: const Text(
+                            'Kartadan tanlash',
+                            style: TextStyle(color: AppColors.govNavy),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.govNavy),
@@ -617,6 +624,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       final existingBuildings = <String, HouseholdModel>{}; // key -> first apt
       for (final h in provider.households) {
         if (h.propertyType != kApartment) continue;
+        if (h.tumanName != _tuman || h.mfyName != _mfy || h.streetName != _street) continue;
         if (widget.existing != null && h.id == widget.existing!.id) continue;
         final key = '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
         existingBuildings.putIfAbsent(key, () => h);
@@ -740,8 +748,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
             Row(
               children: [
                 Expanded(child: _formField(_headLastCtrl, 'Familiyasi', required: true)),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(child: _formField(_headFirstCtrl, 'Ismi', required: true)),
+                const SizedBox(width: 8),
+                Expanded(child: _formField(_headMiddleCtrl, 'Sharifi')),
               ],
             ),
             const SizedBox(height: 12),
@@ -901,17 +911,33 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                 Row(
                   children: [
                     Expanded(child: _formField(m.lastCtrl, 'Familiyasi')),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(child: _formField(m.firstCtrl, 'Ismi')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _formField(m.middleCtrl, 'Sharifi')),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: _formField(m.phoneCtrl, 'Telefon',
-                          icon: Icons.phone_outlined,
-                          keyboard: TextInputType.phone),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: m.showPhone,
+                            onChanged: (v) => setState(() => m.showPhone = v),
+                            activeColor: AppColors.govNavy,
+                          ),
+                          const Text('Tel:', style: TextStyle(fontSize: 12)),
+                          if (m.showPhone) const SizedBox(width: 8),
+                          if (m.showPhone)
+                            Expanded(
+                              child: _formField(m.phoneCtrl, 'Telefon',
+                                  icon: Icons.phone_outlined,
+                                  keyboard: TextInputType.phone),
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 10),
                     // Gender pill
@@ -958,7 +984,33 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               onPressed: _saving
                   ? null
                   : () {
-                      if (_step < 2) {
+                      if (_step == 0) {
+                        if (_tuman == null || _mfy == null || _street == null) {
+                          _snack("Hudud ma\'lumotlarini (Tuman, MFY, Ko\'cha) to\'liq tanlang");
+                          return;
+                        }
+                        if (_propertyType == kHouse && (_houseNumber == null || _houseNumber!.trim().isEmpty)) {
+                          _snack("Uy raqamini kiriting");
+                          return;
+                        }
+                        if (_propertyType == kApartment && _copiedFromBuildingKey == null && (_buildingNumber == null || _buildingNumber!.trim().isEmpty || _apartmentNumber == null || _apartmentNumber!.trim().isEmpty)) {
+                          _snack("Bino va kvartira raqamini kiriting yoki mavjud binoni tanlang");
+                          return;
+                        }
+                        if (_propertyType == kApartment && _copiedFromBuildingKey != null && (_apartmentNumber == null || _apartmentNumber!.trim().isEmpty)) {
+                          _snack("Kvartira raqamini kiriting");
+                          return;
+                        }
+                        setState(() => _step++);
+                      } else if (_step == 1) {
+                        if (_headFirstCtrl.text.trim().isEmpty || _headLastCtrl.text.trim().isEmpty) {
+                          _snack('Oila boshlig\'i ismi va familiyasini kiriting');
+                          return;
+                        }
+                        if (_headPhoneCtrl.text.trim() == '+998' || _headPhoneCtrl.text.trim().isEmpty) {
+                          _snack('Oila boshlig\'i telefon raqamini kiriting');
+                          return;
+                        }
                         setState(() => _step++);
                       } else {
                         _save();
