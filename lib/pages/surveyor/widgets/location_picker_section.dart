@@ -142,7 +142,7 @@ class _LocationPickerSectionState extends State<LocationPickerSection> {
             label: 'Ko\'cha nomi',
             icon: Icons.add_road_outlined,
             value: _selectedStreet,
-            items: LocationData.kochalar,
+            items: _selectedMfy != null ? (LocationData.kochalar[_selectedMfy!] ?? []) : [],
             enabled: _selectedMfy != null,
             onChanged: (val) {
               setState(() => _selectedStreet = val);

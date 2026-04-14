@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:beemor/providers/app_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beemor/services/supabase_config.dart';
+import 'package:beemor/utils/location_data.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,9 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+
+  // Hududlar va lokatsiyalarni keshdan o'qish hamda fonda yangilash
+  await LocationData.initConfigs();
 
   runApp(
     MultiProvider(

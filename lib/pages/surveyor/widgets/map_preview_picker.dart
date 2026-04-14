@@ -33,6 +33,15 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
   }
 
   @override
+  void didUpdateWidget(MapPreviewPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialPosition != oldWidget.initialPosition) {
+      _currentPosition = widget.initialPosition;
+      _mapController.move(_currentPosition, 16);
+    }
+  }
+
+  @override
   void dispose() {
     _mapController.dispose();
     super.dispose();
@@ -96,6 +105,7 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -116,7 +126,7 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
         ),
         const SizedBox(height: 8),
         Container(
-          height: 200,
+          height: 160,
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(16),

@@ -34,7 +34,7 @@ class Step0LocationStep extends StatelessWidget {
   // Callbacks
   final void Function(String newType) onPropertyTypeChanged;
   final void Function(String? t, String? q, String? m, String? s, String addr)
-      onAddressChanged;
+  onAddressChanged;
   final void Function(String? key, HouseholdModel? src) onBuildingKeySelected;
   final void Function(LatLng pos) onPositionChanged;
   final VoidCallback onOpenFullScreenMap;
@@ -255,7 +255,8 @@ class _PropertyDetails extends StatelessWidget {
     if (tuman != null && mfy != null && street != null) {
       for (final h in provider.households) {
         if (h.propertyType != kApartment) continue;
-        if (h.tumanName != tuman || h.mfyName != mfy || h.streetName != street) continue;
+        if (h.tumanName != tuman || h.mfyName != mfy || h.streetName != street)
+          continue;
         final key =
             '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
         existingBuildings.putIfAbsent(key, () => h);
@@ -409,10 +410,7 @@ class _SelectedBuildingBanner extends StatelessWidget {
               ),
             ),
           ),
-          TextButton(
-            onPressed: onClear,
-            child: const Text('O\'zgartirish'),
-          ),
+          TextButton(onPressed: onClear, child: const Text('O\'zgartirish')),
         ],
       ),
     );
@@ -443,7 +441,7 @@ class _MapSection extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onOpenFullScreenMap,
-                  icon: const Icon(Icons.map, size: 18),
+                  icon: const Icon(Icons.location_pin, size: 18),
                   label: const Text('Kartadan tanlash'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.govNavy,
@@ -464,12 +462,9 @@ class _MapSection extends StatelessWidget {
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              height: 180,
-              child: MapPreviewPicker(
-                initialPosition: position,
-                onPositionChanged: onPositionChanged,
-              ),
+            child: MapPreviewPicker(
+              initialPosition: position,
+              onPositionChanged: onPositionChanged,
             ),
           ),
         ],
