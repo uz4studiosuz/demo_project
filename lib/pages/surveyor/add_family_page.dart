@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
+import '../../theme/colors.dart';
 import '../../providers/app_provider.dart';
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
-import '../../theme/colors.dart';
 import 'widgets/map_preview_picker.dart';
 import 'widgets/location_picker_section.dart';
+import 'widgets/surveyor_form_widgets.dart';
+import 'widgets/member_card_widget.dart';
 import 'full_screen_map_picker.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -42,10 +44,12 @@ class _Member {
     this.showPhone = false,
     this.gender = 'MALE',
     this.role = 'Turmush o\'rtog\'i',
-  })  : firstCtrl = TextEditingController(text: firstName),
-        lastCtrl = TextEditingController(text: lastName),
-        middleCtrl = TextEditingController(text: middleName),
-        phoneCtrl = TextEditingController(text: phone.isEmpty ? '+998 ' : phone) {
+  }) : firstCtrl = TextEditingController(text: firstName),
+       lastCtrl = TextEditingController(text: lastName),
+       middleCtrl = TextEditingController(text: middleName),
+       phoneCtrl = TextEditingController(
+         text: phone.isEmpty ? '+998 ' : phone,
+       ) {
     if (phone.isNotEmpty && phone != '+998 ') {
       showPhone = true;
     }
@@ -60,7 +64,7 @@ class _Member {
 }
 
 class _AddFamilyPageState extends State<AddFamilyPage> {
-  // Steps: 0 = manzil, 1 = oila boshlig'i, 2 = a'zolar, 3 = tasdiqlash
+  // Steps: 0 = manzil, 1 = oila boshlig'i, 2 = a'zolar
   int _step = 0;
   bool get _isEdit => widget.existing != null;
 
@@ -70,10 +74,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   String? _qfy;
   String? _mfy;
   String? _street;
-  String? _houseNumber;
-  String? _buildingNumber;
-  String? _apartmentNumber;
-  int?    _floor;
+  final _houseCtrl = TextEditingController();
+  final _buildingCtrl = TextEditingController();
+  final _apartmentCtrl = TextEditingController();
+  final _floorCtrl = TextEditingController();
   String _officialAddress = '';
   LatLng _position = const LatLng(40.3864, 71.7825);
   // Mavjud bino kalit (Apartment uchun) — null → yangi lokatsiya
@@ -81,10 +85,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
   // ── Oila boshlig'i ───────────────────────────────────────────────
   final _headFirstCtrl = TextEditingController();
-  final _headLastCtrl  = TextEditingController();
+  final _headLastCtrl = TextEditingController();
   final _headMiddleCtrl = TextEditingController();
   final _headPhoneCtrl = TextEditingController(text: '+998 ');
-  String _headGender   = 'MALE';
+  String _headGender = 'MALE';
 
   // ── Qo'shimcha a'zolar ───────────────────────────────────────────
   final List<_Member> _members = [];
@@ -116,15 +120,15 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     if (h == null) return;
 
     // Manzil
-    _propertyType   = h.propertyType;
-    _tuman          = h.tumanName;
-    _qfy            = h.qfyName;
-    _mfy            = h.mfyName;
-    _street         = h.streetName;
-    _houseNumber    = h.houseNumber;
-    _buildingNumber = h.buildingNumber;
-    _apartmentNumber = h.apartment;
-    _floor          = h.floor;
+    _propertyType = h.propertyType;
+    _tuman = h.tumanName;
+    _qfy = h.qfyName;
+    _mfy = h.mfyName;
+    _street = h.streetName;
+    _houseCtrl.text = h.houseNumber ?? '';
+    _buildingCtrl.text = h.buildingNumber ?? '';
+    _apartmentCtrl.text = h.apartment ?? '';
+    _floorCtrl.text = h.floor?.toString() ?? '';
     _officialAddress = h.officialAddress;
     _position = LatLng(h.latitude, h.longitude);
 
@@ -133,23 +137,28 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     if (residents.isNotEmpty) {
       final head = residents.first;
       _headFirstCtrl.text = head.firstName;
-      _headLastCtrl.text  = head.lastName;
+      _headLastCtrl.text = head.lastName;
       _headMiddleCtrl.text = head.middleName ?? '';
-      _headPhoneCtrl.text = (head.phonePrimary == null || head.phonePrimary!.isEmpty) ? '+998 ' : head.phonePrimary!;
-      _headGender          = head.gender;
+      _headPhoneCtrl.text =
+          (head.phonePrimary == null || head.phonePrimary!.isEmpty)
+          ? '+998 '
+          : head.phonePrimary!;
+      _headGender = head.gender;
     }
 
     // Qolgan a'zolar
     for (int i = 1; i < residents.length; i++) {
       final r = residents[i];
-      _members.add(_Member(
-        firstName: r.firstName,
-        lastName:  r.lastName,
-        middleName: r.middleName ?? '',
-        phone:     r.phonePrimary ?? '',
-        gender:    r.gender,
-        role:      r.role ?? 'Boshqa',
-      ));
+      _members.add(
+        _Member(
+          firstName: r.firstName,
+          lastName: r.lastName,
+          middleName: r.middleName ?? '',
+          phone: r.phonePrimary ?? '',
+          gender: r.gender,
+          role: r.role ?? 'Boshqa',
+        ),
+      );
     }
   }
 
@@ -159,7 +168,13 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     _headLastCtrl.dispose();
     _headMiddleCtrl.dispose();
     _headPhoneCtrl.dispose();
-    for (final m in _members) m.dispose();
+    _houseCtrl.dispose();
+    _buildingCtrl.dispose();
+    _apartmentCtrl.dispose();
+    _floorCtrl.dispose();
+    for (final m in _members) {
+      m.dispose();
+    }
     super.dispose();
   }
 
@@ -167,9 +182,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     final LatLng? result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FullScreenMapPicker(
-          initialPosition: _position,
-        ),
+        builder: (context) => FullScreenMapPicker(initialPosition: _position),
       ),
     );
 
@@ -180,19 +193,6 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
   // ─── Save ─────────────────────────────────────────────────────────
   Future<void> _save() async {
-    // Validation
-    if (_headFirstCtrl.text.trim().isEmpty || _headLastCtrl.text.trim().isEmpty) {
-      _snack('Oila boshlig\'i ismi va familiyasini kiriting');
-      setState(() => _step = 1);
-      return;
-    }
-    final hp = _headPhoneCtrl.text.trim();
-    if (hp == '+998' || hp.isEmpty) {
-      _snack('Oila boshlig\'i telefon raqamini kiriting');
-      setState(() => _step = 1);
-      return;
-    }
-
     setState(() => _saving = true);
     final provider = Provider.of<AppProvider>(context, listen: false);
 
@@ -201,16 +201,24 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       regionId: 1,
       districtId: 1,
       createdByAgentId: provider.currentUser?.id ?? 0,
-      officialAddress: _officialAddress.isEmpty ? '${_tuman ?? ''}, ${_street ?? ''}'.trim() : _officialAddress,
+      officialAddress: _officialAddress.isEmpty
+          ? '${_tuman ?? ''}, ${_street ?? ''}'.trim()
+          : _officialAddress,
       propertyType: _propertyType,
       tumanName: _tuman,
       qfyName: _qfy,
       mfyName: _mfy,
       streetName: _street,
-      houseNumber: _houseNumber,
-      buildingNumber: _buildingNumber,
-      apartment: _apartmentNumber,
-      floor: _floor,
+      houseNumber: _houseCtrl.text.trim().isEmpty
+          ? null
+          : _houseCtrl.text.trim(),
+      buildingNumber: _buildingCtrl.text.trim().isEmpty
+          ? null
+          : _buildingCtrl.text.trim(),
+      apartment: _apartmentCtrl.text.trim().isEmpty
+          ? null
+          : _apartmentCtrl.text.trim(),
+      floor: int.tryParse(_floorCtrl.text.trim()),
       latitude: _position.latitude,
       longitude: _position.longitude,
       createdAt: _isEdit ? widget.existing!.createdAt : DateTime.now(),
@@ -225,25 +233,37 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         householdId: household.id,
         firstName: _headFirstCtrl.text.trim(),
         lastName: _headLastCtrl.text.trim(),
-        middleName: _headMiddleCtrl.text.trim().isEmpty ? null : _headMiddleCtrl.text.trim(),
-        phonePrimary: _headPhoneCtrl.text.trim() == '+998' ? null : _headPhoneCtrl.text.trim(),
+        middleName: _headMiddleCtrl.text.trim().isEmpty
+            ? null
+            : _headMiddleCtrl.text.trim(),
+        phonePrimary: _headPhoneCtrl.text.trim() == '+998'
+            ? null
+            : _headPhoneCtrl.text.trim(),
         gender: _headGender,
         role: 'Oila boshlig\'i',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      ..._members.where((m) => m.firstCtrl.text.trim().isNotEmpty).map((m) => ResidentModel(
-        id: 0,
-        householdId: household.id,
-        firstName: m.firstCtrl.text.trim(),
-        lastName: m.lastCtrl.text.trim(),
-        middleName: m.middleCtrl.text.trim().isEmpty ? null : m.middleCtrl.text.trim(),
-        phonePrimary: (m.phoneCtrl.text.trim() == '+998' || !m.showPhone) ? null : m.phoneCtrl.text.trim(),
-        gender: m.gender,
-        role: m.role,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      )),
+      ..._members
+          .where((m) => m.firstCtrl.text.trim().isNotEmpty)
+          .map(
+            (m) => ResidentModel(
+              id: 0,
+              householdId: household.id,
+              firstName: m.firstCtrl.text.trim(),
+              lastName: m.lastCtrl.text.trim(),
+              middleName: m.middleCtrl.text.trim().isEmpty
+                  ? null
+                  : m.middleCtrl.text.trim(),
+              phonePrimary: (m.phoneCtrl.text.trim() == '+998' || !m.showPhone)
+                  ? null
+                  : m.phoneCtrl.text.trim(),
+              gender: m.gender,
+              role: m.role,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          ),
     ];
 
     bool ok;
@@ -256,8 +276,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     if (mounted) {
       setState(() => _saving = false);
       if (ok) {
-        _snack(_isEdit ? 'Muvaffaqiyatli yangilandi!' : 'Muvaffaqiyatli saqlandi!',
-            success: true);
+        _snack(
+          _isEdit ? 'Muvaffaqiyatli yangilandi!' : 'Muvaffaqiyatli saqlandi!',
+          success: true,
+        );
         Navigator.pop(context, true);
       } else {
         _snack('Saqlashda xatolik yuz berdi');
@@ -266,12 +288,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   }
 
   void _snack(String msg, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? AppColors.success : AppColors.danger,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? AppColors.success : AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -280,7 +304,9 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F6F8),
         body: SafeArea(
@@ -291,13 +317,6 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.06, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
                   child: KeyedSubtree(
                     key: ValueKey(_step),
                     child: _buildCurrentStep(),
@@ -312,7 +331,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     );
   }
 
-  // ─── Top bar ──────────────────────────────────────────────────────
+  // ─── Components ───────────────────────────────────────────────────
+
   Widget _buildTopBar() {
     return Container(
       color: Colors.white,
@@ -321,8 +341,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.govNavy, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.govNavy,
+              size: 20,
+            ),
           ),
           Expanded(
             child: Column(
@@ -339,12 +362,13 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                 Text(
                   _stepTitle(_step),
                   style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary),
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
-          // Step count indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -354,9 +378,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
             child: Text(
               '${_step + 1} / 3',
               style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.govNavy),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.govNavy,
+              ),
             ),
           ),
         ],
@@ -366,20 +391,22 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
   String _stepTitle(int step) {
     switch (step) {
-      case 0: return 'Manzil va joylashuv';
-      case 1: return 'Oila boshlig\'i ma\'lumotlari';
-      default: return 'Qo\'shimcha oila a\'zolari';
+      case 0:
+        return 'Manzil va joylashuv';
+      case 1:
+        return 'Oila boshlig\'i ma\'lumotlari';
+      default:
+        return 'Qo\'shimcha oila a\'zolari';
     }
   }
 
-  // ─── Steps indicator ──────────────────────────────────────────────
   Widget _buildStepsIndicator() {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
         children: List.generate(3, (i) {
-          final done    = i < _step;
+          final done = i < _step;
           final current = i == _step;
           return Expanded(
             child: Row(
@@ -389,7 +416,9 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                   width: current ? 28 : 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: done || current ? AppColors.govNavy : const Color(0xFFE5EAF0),
+                    color: done || current
+                        ? AppColors.govNavy
+                        : const Color(0xFFE5EAF0),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
@@ -398,9 +427,12 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                         : Text(
                             '${i + 1}',
                             style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: current ? Colors.white : AppColors.textSecondary),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: current
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                            ),
                           ),
                   ),
                 ),
@@ -419,152 +451,77 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     );
   }
 
-  // ─── Step content router ──────────────────────────────────────────
   Widget _buildCurrentStep() {
     switch (_step) {
-      case 0: return _buildStep0Location();
-      case 1: return _buildStep1Head();
-      default: return _buildStep2Members();
+      case 0:
+        return _buildStep0Location();
+      case 1:
+        return _buildStep1Head();
+      default:
+        return _buildStep2Members();
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 0 — MANZIL
-  // ═══════════════════════════════════════════════════════════════════
+  // ── Step 0 — Location ──
   Widget _buildStep0Location() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         children: [
-          // ── Mulk turi tanlash ──────────────────────────────
-          _card(
+          SurveyorFormWidgets.card(
             icon: Icons.house_outlined,
             title: 'Mulk turi',
             child: _propertyTypeToggle(),
           ),
           const SizedBox(height: 12),
-
-          _card(
+          SurveyorFormWidgets.card(
             icon: Icons.location_on_outlined,
             title: 'Hudud ma\'lumotlari',
             child: LocationPickerSection(
               initialTuman: _tuman,
               initialMfy: _mfy,
               initialStreet: _street,
-              onAddressChanged: (tuman, qfy, mfy, street, address) {
+              onAddressChanged: (t, q, m, s, a) {
                 setState(() {
-                  _tuman = tuman;
-                  _qfy = qfy;
-                  _mfy = mfy;
-                  _street = street;
-                  _officialAddress = address;
+                  _tuman = t;
+                  _qfy = q;
+                  _mfy = m;
+                  _street = s;
+                  _officialAddress = a;
                 });
               },
             ),
           ),
           const SizedBox(height: 12),
-
-          // ── Uy / Kvartira raqamlari ────────────────────────
-          _card(
-            icon: _propertyType == kHouse ? Icons.home_outlined : Icons.apartment_outlined,
-            title: _propertyType == kHouse ? 'Uy ma\'lumotlari' : 'Kvartira ma\'lumotlari',
+          SurveyorFormWidgets.card(
+            icon: _propertyType == kHouse
+                ? Icons.home_outlined
+                : Icons.apartment_outlined,
+            title: _propertyType == kHouse
+                ? 'Uy ma\'lumotlari'
+                : 'Kvartira ma\'lumotlari',
             child: _buildPropertyDetails(),
           ),
           const SizedBox(height: 12),
-
-          // Geolokatsiya — Kvartira + bino tanlangan bo'lsa lokatsiyani ko'rsatish (o'zgartirish shart emas)
           if (_propertyType == kApartment && _copiedFromBuildingKey != null)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE3F2FD),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF1976D2).withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on, color: Color(0xFF1976D2), size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Lokatsiya binoning manzilidan olindi',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1565C0))),
-                        Text(
-                          '${_position.latitude.toStringAsFixed(5)}, ${_position.longitude.toStringAsFixed(5)}',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF1976D2)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _copiedFromBuildingKey = null),
-                    child: const Text('O\'zgartirish', style: TextStyle(fontSize: 11, color: Color(0xFF1976D2))),
-                  ),
-                ],
-              ),
-            )
+            _selectedBuildingBanner()
           else
-            // Xarita + GPS
-            _card(
-              icon: Icons.map_outlined,
-              title: 'Geolokatsiya',
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _openFullScreenMap,
-                          icon: const Icon(Icons.map, color: AppColors.govNavy, size: 18),
-                          label: const Text(
-                            'Kartadan tanlash',
-                            style: TextStyle(color: AppColors.govNavy),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.govNavy),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(color: AppColors.govNavy.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(8)),
-                        child: Text(
-                          '${_position.latitude.toStringAsFixed(4)}, ${_position.longitude.toStringAsFixed(4)}',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      height: 180,
-                      child: MapPreviewPicker(
-                        initialPosition: _position,
-                        onPositionChanged: (p) => setState(() => _position = p),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _mapSection(),
         ],
       ),
     );
   }
 
-  // ── Mulk turi toggle ─────────────────────────────────────────────
   Widget _propertyTypeToggle() {
     return Row(
       children: [
-        _propTypeBtn(kHouse,     Icons.home_outlined,     'Xonadon\n(alohida uy)'),
+        _propTypeBtn(kHouse, Icons.home_outlined, 'Xonadon\n(alohida uy)'),
         const SizedBox(width: 10),
-        _propTypeBtn(kApartment, Icons.apartment_outlined, 'Kvartira\n(ko\'p qavatli)'),
+        _propTypeBtn(
+          kApartment,
+          Icons.apartment_outlined,
+          'Kvartira\n(ko\'p qavatli)',
+        ),
       ],
     );
   }
@@ -575,11 +532,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       child: GestureDetector(
         onTap: () => setState(() {
           _propertyType = type;
-          _houseNumber = null;
-          _buildingNumber = null;
-          _apartmentNumber = null;
-          _floor = null;
-          _copiedFromBuildingKey = null; // bino tanlovini tozalash
+          _houseCtrl.clear();
+          _buildingCtrl.clear();
+          _apartmentCtrl.clear();
+          _floorCtrl.clear();
+          _copiedFromBuildingKey = null;
         }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -587,11 +544,17 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           decoration: BoxDecoration(
             color: active ? AppColors.govNavy : const Color(0xFFF5F6F8),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: active ? AppColors.govNavy : Colors.transparent),
+            border: Border.all(
+              color: active ? AppColors.govNavy : Colors.transparent,
+            ),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 28, color: active ? Colors.white : AppColors.textSecondary),
+              Icon(
+                icon,
+                size: 28,
+                color: active ? Colors.white : AppColors.textSecondary,
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
@@ -609,545 +572,256 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     );
   }
 
-  // ── Mulk turiga qarab maydonlar ──────────────────────────────────
   Widget _buildPropertyDetails() {
     if (_propertyType == kHouse) {
-      return _field(
+      return SurveyorFormWidgets.field(
         label: 'Uy raqami (masalan: 45A)',
         icon: Icons.home_outlined,
-        initial: _houseNumber,
-        onChanged: (v) => setState(() => _houseNumber = v.isEmpty ? null : v),
+        controller: _houseCtrl,
       );
     } else {
-      // ── Mavjud binoni tanlash (Apartment rejimi) ──
       final provider = Provider.of<AppProvider>(context, listen: false);
-      final existingBuildings = <String, HouseholdModel>{}; // key -> first apt
+      final existingBuildings = <String, HouseholdModel>{};
       for (final h in provider.households) {
         if (h.propertyType != kApartment) continue;
-        if (h.tumanName != _tuman || h.mfyName != _mfy || h.streetName != _street) continue;
-        if (widget.existing != null && h.id == widget.existing!.id) continue;
-        final key = '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
+        if (h.tumanName != _tuman ||
+            h.mfyName != _mfy ||
+            h.streetName != _street)
+          continue;
+        final key =
+            '${h.buildingNumber ?? "?"}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
         existingBuildings.putIfAbsent(key, () => h);
       }
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mavjud bino tanlov
           if (existingBuildings.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(children: [
-                    Icon(Icons.info_outline, size: 14, color: Color(0xFF388E3C)),
-                    SizedBox(width: 6),
-                    Text('Mavjud binoni tanlang (lokatsiyani qaytadan kiritmang)',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF388E3C), fontWeight: FontWeight.w600)),
-                  ]),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _copiedFromBuildingKey,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      hintText: 'Bino tanlang...',
-                      hintStyle: const TextStyle(fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    ),
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Yangi bino (yangi lokatsiya)')),
-                      ...existingBuildings.entries.map((e) {
-                        final h = e.value;
-                        return DropdownMenuItem<String>(
-                          value: e.key,
-                          child: Text(
-                            '${h.buildingNumber ?? "?"}-bino | ${h.streetName ?? h.officialAddress}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }),
-                    ],
-                    onChanged: (key) {
-                      setState(() => _copiedFromBuildingKey = key);
-                      if (key != null && existingBuildings.containsKey(key)) {
-                        final src = existingBuildings[key]!;
-                        setState(() {
-                          _position = LatLng(src.latitude, src.longitude);
-                          _buildingNumber = src.buildingNumber;
-                          // Address ma'lumotlarini ham ko'chirish
-                          _tuman = src.tumanName;
-                          _qfy = src.qfyName;
-                          _mfy = src.mfyName;
-                          _street = src.streetName;
-                          _officialAddress = src.officialAddress;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
+            _buildingDropdown(existingBuildings),
             const SizedBox(height: 12),
           ],
-
-          // Qavat va kvartira raqamlari
           Row(
             children: [
               Expanded(
-                child: _field(
+                child: SurveyorFormWidgets.field(
                   label: 'Bino raqami',
                   icon: Icons.apartment_outlined,
-                  initial: _buildingNumber,
-                  onChanged: (v) => setState(() => _buildingNumber = v.isEmpty ? null : v),
+                  controller: _buildingCtrl,
+                  readOnly: _copiedFromBuildingKey != null,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _field(
+                child: SurveyorFormWidgets.field(
                   label: 'Qavat',
                   icon: Icons.stairs_outlined,
                   keyboardType: TextInputType.number,
-                  initial: _floor?.toString(),
-                  onChanged: (v) => setState(() => _floor = int.tryParse(v)),
+                  controller: _floorCtrl,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          _field(
+          SurveyorFormWidgets.field(
             label: 'Kvartira raqami',
             icon: Icons.door_front_door_outlined,
-            initial: _apartmentNumber,
-            onChanged: (v) => setState(() => _apartmentNumber = v.isEmpty ? null : v),
+            controller: _apartmentCtrl,
           ),
         ],
       );
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 1 — OILA BOSHLIG'I
-  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildingDropdown(Map<String, HouseholdModel> buildings) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline, size: 14, color: Color(0xFF388E3C)),
+              SizedBox(width: 6),
+              Text(
+                'Mavjud binoni tanlang',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF388E3C),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _copiedFromBuildingKey,
+            isExpanded: true,
+            decoration: InputDecoration(
+              hintText: 'Bino tanlang...',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Yangi bino')),
+              ...buildings.entries.map(
+                (e) => DropdownMenuItem(
+                  value: e.key,
+                  child: Text('${e.value.buildingNumber ?? "?"}-bino'),
+                ),
+              ),
+            ],
+            onChanged: (key) {
+              setState(() {
+                _copiedFromBuildingKey = key;
+                if (key != null) {
+                  final src = buildings[key]!;
+                  _position = LatLng(src.latitude, src.longitude);
+                  _buildingCtrl.text = src.buildingNumber ?? '';
+                  _tuman = src.tumanName;
+                  _qfy = src.qfyName;
+                  _mfy = src.mfyName;
+                  _street = src.streetName;
+                  _officialAddress = src.officialAddress;
+                }
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _selectedBuildingBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on, color: Color(0xFF1976D2)),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Lokatsiya binodan olindi',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1565C0),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _copiedFromBuildingKey = null),
+            child: const Text('O\'zgartirish'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mapSection() {
+    return SurveyorFormWidgets.card(
+      icon: Icons.map_outlined,
+      title: 'Geolokatsiya',
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _openFullScreenMap,
+                  icon: const Icon(Icons.map, size: 18),
+                  label: const Text('Kartadan tanlash'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.govNavy,
+                    side: const BorderSide(color: AppColors.govNavy),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${_position.latitude.toStringAsFixed(4)}, ${_position.longitude.toStringAsFixed(4)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 180,
+              child: MapPreviewPicker(
+                initialPosition: _position,
+                onPositionChanged: (p) => setState(() => _position = p),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 1 head ──
   Widget _buildStep1Head() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: _card(
+      padding: const EdgeInsets.all(16),
+      child: SurveyorFormWidgets.card(
         icon: Icons.person_outline_rounded,
         title: 'Oila boshlig\'i',
         child: Column(
           children: [
             Row(
               children: [
-                Expanded(child: _formField(_headLastCtrl, 'Familiyasi', required: true)),
+                Expanded(
+                  child: SurveyorFormWidgets.formField(
+                    _headLastCtrl,
+                    'Familiyasi',
+                    required: true,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: _formField(_headFirstCtrl, 'Ismi', required: true)),
-                const SizedBox(width: 8),
-                Expanded(child: _formField(_headMiddleCtrl, 'Sharifi')),
+                Expanded(
+                  child: SurveyorFormWidgets.formField(
+                    _headFirstCtrl,
+                    'Ismi',
+                    required: true,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            _formField(
-              _headPhoneCtrl,
-              'Telefon raqami',
-              icon: Icons.phone_outlined,
-              keyboard: TextInputType.phone,
+            const SizedBox(height: 10),
+            SurveyorFormWidgets.formField(
+              _headMiddleCtrl,
+              'Sharifi (Otchestvasi)',
             ),
-            const SizedBox(height: 16),
-            // Gender selector
+            const SizedBox(height: 10),
             _genderSelector(
               value: _headGender,
               onChanged: (v) => setState(() => _headGender = v),
             ),
+            const SizedBox(height: 12),
+            SurveyorFormWidgets.formField(
+              _headPhoneCtrl,
+              'Telefon',
+              icon: Icons.phone_android_rounded,
+              keyboard: TextInputType.phone,
+              required: true,
+            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 2 — A'ZOLAR
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildStep2Members() {
-    return Column(
-      children: [
-        // Add member button — top fixed
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => setState(() => _members.add(_Member())),
-              icon: const Icon(Icons.person_add_outlined,
-                  color: AppColors.govNavy, size: 20),
-              label: const Text('A\'zo qo\'shish',
-                  style: TextStyle(color: AppColors.govNavy, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.govNavy),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        Expanded(
-          child: _members.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.group_outlined,
-                          size: 56, color: AppColors.govNavy.withValues(alpha: 0.3)),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Qo\'shimcha a\'zo yo\'q',
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMain),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Yuqoridagi tugma orqali qo\'shishingiz mumkin',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  itemCount: _members.length,
-                  itemBuilder: (_, i) => _memberCard(i),
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _memberCard(int i) {
-    final m = _members[i];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 8, 0),
-            child: Row(
-              children: [
-                Container(
-                  width: 28, height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.govNavy.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text('${i + 1}',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.govNavy)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text('Oila a\'zosi',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.govNavy,
-                        fontSize: 13)),
-                const Spacer(),
-                // Role dropdown compact
-                DropdownButton<String>(
-                  value: m.role,
-                  underline: const SizedBox(),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textMain),
-                  isDense: true,
-                  items: _roles
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) => setState(() => m.role = v!),
-                ),
-                IconButton(
-                  onPressed: () => setState(() {
-                    _members[i].dispose();
-                    _members.removeAt(i);
-                  }),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppColors.danger, size: 18),
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: _formField(m.lastCtrl, 'Familiyasi')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _formField(m.firstCtrl, 'Ismi')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _formField(m.middleCtrl, 'Sharifi')),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Switch(
-                            value: m.showPhone,
-                            onChanged: (v) => setState(() => m.showPhone = v),
-                            activeColor: AppColors.govNavy,
-                          ),
-                          const Text('Tel:', style: TextStyle(fontSize: 12)),
-                          if (m.showPhone) const SizedBox(width: 8),
-                          if (m.showPhone)
-                            Expanded(
-                              child: _formField(m.phoneCtrl, 'Telefon',
-                                  icon: Icons.phone_outlined,
-                                  keyboard: TextInputType.phone),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Gender pill
-                    _miniGenderSelector(
-                      value: m.gender,
-                      onChanged: (v) => setState(() => m.gender = v),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Bottom bar ───────────────────────────────────────────────────
-  Widget _buildBottomBar() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      child: Row(
-        children: [
-          if (_step > 0)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => setState(() => _step--),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.govNavy),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('Orqaga',
-                    style: TextStyle(
-                        color: AppColors.govNavy, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          if (_step > 0) const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: _saving
-                  ? null
-                  : () {
-                      if (_step == 0) {
-                        if (_tuman == null || _mfy == null || _street == null) {
-                          _snack("Hudud ma\'lumotlarini (Tuman, MFY, Ko\'cha) to\'liq tanlang");
-                          return;
-                        }
-                        if (_propertyType == kHouse && (_houseNumber == null || _houseNumber!.trim().isEmpty)) {
-                          _snack("Uy raqamini kiriting");
-                          return;
-                        }
-                        if (_propertyType == kApartment && _copiedFromBuildingKey == null && (_buildingNumber == null || _buildingNumber!.trim().isEmpty || _apartmentNumber == null || _apartmentNumber!.trim().isEmpty)) {
-                          _snack("Bino va kvartira raqamini kiriting yoki mavjud binoni tanlang");
-                          return;
-                        }
-                        if (_propertyType == kApartment && _copiedFromBuildingKey != null && (_apartmentNumber == null || _apartmentNumber!.trim().isEmpty)) {
-                          _snack("Kvartira raqamini kiriting");
-                          return;
-                        }
-                        setState(() => _step++);
-                      } else if (_step == 1) {
-                        if (_headFirstCtrl.text.trim().isEmpty || _headLastCtrl.text.trim().isEmpty) {
-                          _snack('Oila boshlig\'i ismi va familiyasini kiriting');
-                          return;
-                        }
-                        if (_headPhoneCtrl.text.trim() == '+998' || _headPhoneCtrl.text.trim().isEmpty) {
-                          _snack('Oila boshlig\'i telefon raqamini kiriting');
-                          return;
-                        }
-                        setState(() => _step++);
-                      } else {
-                        _save();
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.govNavy,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 0,
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text(
-                      _step < 2
-                          ? 'Davom etish'
-                          : (_isEdit ? 'Saqlash' : 'Yakunlash va saqlash'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Shared widgets ───────────────────────────────────────────────
-  Widget _card({
-    required IconData icon,
-    required String title,
-    required Widget child,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.govNavy.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: AppColors.govNavy, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.govNavy)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _formField(
-    TextEditingController ctrl,
-    String label, {
-    bool required = false,
-    IconData? icon,
-    TextInputType keyboard = TextInputType.text,
-  }) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: keyboard,
-      style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label + (required ? ' *' : ''),
-        labelStyle: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        prefixIcon: icon != null ? Icon(icon, size: 18, color: AppColors.govNavy) : null,
-        filled: true,
-        fillColor: const Color(0xFFF5F6F8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.govNavy, width: 1.5),
-        ),
-      ),
-    );
-  }
-
-  // Simple plain field with onChanged
-  Widget _field({
-    required String label,
-    required IconData icon,
-    String? initial,
-    TextInputType keyboardType = TextInputType.text,
-    required void Function(String) onChanged,
-  }) {
-    return TextFormField(
-      initialValue: initial,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        prefixIcon: Icon(icon, size: 18, color: AppColors.govNavy),
-        filled: true,
-        fillColor: const Color(0xFFF5F6F8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.govNavy, width: 1.5),
         ),
       ),
     );
@@ -1163,30 +837,16 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         return Expanded(
           child: GestureDetector(
             onTap: () => onChanged(g),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+            child: Container(
               margin: EdgeInsets.only(right: g == 'MALE' ? 8 : 0),
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: active ? AppColors.govNavy : const Color(0xFFF5F6F8),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    g == 'MALE' ? Icons.man_rounded : Icons.woman_rounded,
-                    color: active ? Colors.white : AppColors.textSecondary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    g == 'MALE' ? 'Erkak' : 'Ayol',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: active ? Colors.white : AppColors.textMain),
-                  ),
-                ],
+              child: Icon(
+                g == 'MALE' ? Icons.man : Icons.woman,
+                color: active ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ),
@@ -1195,32 +855,119 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     );
   }
 
-  Widget _miniGenderSelector({
-    required String value,
-    required void Function(String) onChanged,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: ['MALE', 'FEMALE'].map((g) {
-        final active = value == g;
-        return GestureDetector(
-          onTap: () => onChanged(g),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: EdgeInsets.only(left: g == 'FEMALE' ? 4 : 0),
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: active ? AppColors.govNavy : const Color(0xFFF5F6F8),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              g == 'MALE' ? Icons.man_rounded : Icons.woman_rounded,
-              color: active ? Colors.white : AppColors.textSecondary,
-              size: 20,
+  // ── Step 2 members ──
+  Widget _buildStep2Members() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => setState(() => _members.add(_Member())),
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              label: const Text('Oila a\'zosi qo\'shish'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.govNavy,
+                side: const BorderSide(color: AppColors.govNavy),
+              ),
             ),
           ),
-        );
-      }).toList(),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _members.length,
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: MemberCardWidget(
+                index: i,
+                firstCtrl: _members[i].firstCtrl,
+                lastCtrl: _members[i].lastCtrl,
+                middleCtrl: _members[i].middleCtrl,
+                phoneCtrl: _members[i].phoneCtrl,
+                gender: _members[i].gender,
+                role: _members[i].role,
+                showPhone: _members[i].showPhone,
+                roles: _roles,
+                onRemove: () => setState(() => _members.removeAt(i)),
+                onGenderChanged: (g) => setState(() => _members[i].gender = g),
+                onRoleChanged: (r) => setState(() => _members[i].role = r),
+                onPhoneToggle: (v) => setState(() => _members[i].showPhone = v),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      child: Row(
+        children: [
+          if (_step > 0)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => setState(() => _step--),
+                child: const Text('Orqaga'),
+              ),
+            ),
+          if (_step > 0) const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: _saving
+                  ? null
+                  : () {
+                      if (_step == 0) {
+                        if (_tuman == null || _mfy == null || _street == null) {
+                          _snack("Hudud ma'lumotlarini to'liq tanlang");
+                          return;
+                        }
+                        if (_propertyType == kHouse &&
+                            _houseCtrl.text.isEmpty) {
+                          _snack("Uy raqamini kiriting");
+                          return;
+                        }
+                        if (_propertyType == kApartment &&
+                            _copiedFromBuildingKey == null &&
+                            (_buildingCtrl.text.isEmpty ||
+                                _apartmentCtrl.text.isEmpty)) {
+                          _snack("Bino va kvartira raqamini kiriting");
+                          return;
+                        }
+                        if (_propertyType == kApartment &&
+                            _copiedFromBuildingKey != null &&
+                            _apartmentCtrl.text.isEmpty) {
+                          _snack("Kvartira raqamini kiriting");
+                          return;
+                        }
+                        setState(() => _step++);
+                      } else if (_step == 1) {
+                        if (_headFirstCtrl.text.isEmpty ||
+                            _headLastCtrl.text.isEmpty) {
+                          _snack('Ism va familiyani kiriting');
+                          return;
+                        }
+                        setState(() => _step++);
+                      } else {
+                        _save();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.govNavy,
+                foregroundColor: Colors.white,
+              ),
+              child: _saving
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(_step < 2 ? 'Davom etish' : 'Saqlash'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
