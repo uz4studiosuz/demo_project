@@ -236,6 +236,51 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     }
   }
 
+  bool _isValidPhone(String phone) {
+    // O'zbekiston raqami: +998 dan keyin 9 ta raqam (jami 13 belgi)
+    final clean = phone.replaceAll(RegExp(r'\s+'), '');
+    return RegExp(r'^\+998\d{9}$').hasMatch(clean);
+  }
+
+  Future<void> _deleteHousehold() async {
+    if (!_isEdit || widget.existing == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xonadonni o\'chirish'),
+        content: const Text(
+            'Ushbu xonadon va unga tegishli barcha oila a\'zolarini o\'chirib tashlamoqchimisiz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Bekor qilish'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('O\'chirish'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _saving = true);
+      final ok = await Provider.of<AppProvider>(context, listen: false)
+          .deleteHousehold(widget.existing!.id);
+      if (mounted) {
+        setState(() => _saving = false);
+        if (ok) {
+          _snack('Xonadon o\'chirildi', success: true);
+          Navigator.pop(context, true);
+        } else {
+          _snack('O\'chirishda xatolik yuz berdi');
+        }
+      }
+    }
+  }
+
   // ─── Save ─────────────────────────────────────────────────────────
   Future<void> _save() async {
     setState(() => _saving = true);
@@ -518,6 +563,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               ),
             ),
           ),
+          if (_isEdit) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _saving ? null : _deleteHousehold,
+              icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 22),
+              tooltip: 'O\'chirish',
+            ),
+          ],
         ],
       ),
     );
@@ -794,13 +847,34 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
                         setState(() => _step++);
                       } else if (_step == 1) {
-                        if (_headFirstCtrl.text.isEmpty ||
-                            _headLastCtrl.text.isEmpty) {
+                        if (_headFirstCtrl.text.trim().isEmpty ||
+                            _headLastCtrl.text.trim().isEmpty) {
                           _snack('Ism va familiyani kiriting');
                           return;
                         }
+                        final phone = _headPhoneCtrl.text.trim();
+                        if (phone != '+998' && phone != '+998 ' && !_isValidPhone(phone)) {
+                          _snack('Telefon raqami noto\'g\'ri formatda (+998901234567)');
+                          return;
+                        }
+
                         setState(() => _step++);
                       } else if (_step == 2) {
+                        for (final m in _members) {
+                          if (m.firstCtrl.text.trim().isNotEmpty) {
+                            if (m.lastCtrl.text.trim().isEmpty) {
+                              _snack('${m.firstCtrl.text}ning familiyasini kiriting');
+                              return;
+                            }
+                            if (m.showPhone) {
+                              final p = m.phoneCtrl.text.trim();
+                              if (p != '+998' && p != '+998 ' && !_isValidPhone(p)) {
+                                _snack('${m.firstCtrl.text}ning telefon raqami noto\'g\'ri');
+                                return;
+                              }
+                            }
+                          }
+                        }
                         setState(() => _step++);
                       } else {
                         _save();

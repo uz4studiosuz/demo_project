@@ -60,6 +60,7 @@ class MemberCardWidget extends StatelessWidget {
                     child: SurveyorFormWidgets.formField(
                       lastCtrl,
                       'Familiyasi',
+                      required: true,
                       suggestions: cachedLastNames,
                     ),
                   ),
@@ -68,6 +69,7 @@ class MemberCardWidget extends StatelessWidget {
                     child: SurveyorFormWidgets.formField(
                       firstCtrl,
                       'Ismi',
+                      required: true,
                       suggestions: cachedFirstNames,
                     ),
                   ),
@@ -195,6 +197,7 @@ class MemberCardWidget extends StatelessWidget {
               'Telefon raqami',
               icon: Icons.phone_android_rounded,
               keyboard: TextInputType.phone,
+              required: true,
             ),
           ),
       ],

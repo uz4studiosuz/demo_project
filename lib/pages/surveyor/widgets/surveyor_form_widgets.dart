@@ -61,6 +61,7 @@ class SurveyorFormWidgets {
     TextInputType keyboardType = TextInputType.text,
     void Function(String)? onChanged,
     bool readOnly = false,
+    bool required = false,
   }) {
     final ctrl = controller ?? TextEditingController();
     return ValueListenableBuilder(
@@ -76,7 +77,7 @@ class SurveyorFormWidgets {
             color: readOnly ? AppColors.textSecondary : AppColors.textMain,
           ),
           decoration: InputDecoration(
-            labelText: label,
+            labelText: label + (required ? ' *' : ''),
             labelStyle: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
             prefixIcon: Icon(icon, size: 18, color: AppColors.govNavy),
             suffixIcon: !readOnly && value.text.isNotEmpty

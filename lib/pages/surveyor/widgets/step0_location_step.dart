@@ -245,6 +245,7 @@ class _PropertyDetails extends StatelessWidget {
         label: 'Uy raqami (masalan: 45A)',
         icon: Icons.home_outlined,
         controller: houseCtrl,
+        required: true,
       );
     }
 
@@ -282,6 +283,7 @@ class _PropertyDetails extends StatelessWidget {
                 icon: Icons.apartment_outlined,
                 controller: buildingCtrl,
                 readOnly: copiedFromBuildingKey != null,
+                required: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -300,6 +302,7 @@ class _PropertyDetails extends StatelessWidget {
           label: 'Kvartira raqami',
           icon: Icons.door_front_door_outlined,
           controller: apartmentCtrl,
+          required: true,
         ),
       ],
     );

@@ -153,7 +153,7 @@ class _LocationPickerSectionState extends State<LocationPickerSection> {
           duration: const Duration(milliseconds: 200),
           opacity: _selectedMfy != null ? 1.0 : 0.4,
           child: _dropdownField<String>(
-            label: 'Ko\'cha nomi',
+            label: 'Ko\'cha nomi *',
             icon: Icons.add_road_outlined,
             value: _selectedStreet,
             items: _selectedMfy != null ? (LocationData.kochalar[_selectedMfy!] ?? []) : [],
