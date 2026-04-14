@@ -776,6 +776,22 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                            return;
                         }
 
+                        // Joylashuvning ushbu (aynan) nuqtasida boshqa uy yo'qligini tekshirish (icon ustma-ust tushmasligi uchun)
+                        if (_propertyType == kHouse) {
+                          bool isDuplicateLocation = provider.households.any((h) {
+                            if (_isEdit && widget.existing?.id == h.id) return false;
+                            if (h.propertyType != kHouse) return false;
+                            // 5 xonali aniqlikgacha tekshirish (1 metrgacha aniqlik)
+                            return h.latitude.toStringAsFixed(5) == _position.latitude.toStringAsFixed(5) && 
+                                   h.longitude.toStringAsFixed(5) == _position.longitude.toStringAsFixed(5);
+                          });
+
+                          if (isDuplicateLocation) {
+                             _snack("Ushbu xarita nuqtasida (lokatsiyada) boshqa uy mavjud. Iltimos, xaritadan aynan ushbu uyning ustiga belgilang!");
+                             return;
+                          }
+                        }
+
                         setState(() => _step++);
                       } else if (_step == 1) {
                         if (_headFirstCtrl.text.isEmpty ||

@@ -1,4 +1,5 @@
 import 'package:beemor/l10n/app_localizations.dart';
+import 'package:beemor/models/user_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:provider/provider.dart';
@@ -110,7 +111,9 @@ class _LoginPageState extends State<LoginPage> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,
@@ -129,7 +132,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const Spacer(),
             if (isSelected)
-              const Icon(TablerIcons.circle_check_filled, color: AppColors.primary),
+              const Icon(
+                TablerIcons.circle_check_filled,
+                color: AppColors.primary,
+              ),
           ],
         ),
       ),
@@ -164,14 +170,17 @@ class _LoginPageState extends State<LoginPage> {
                             provider.locale.languageCode == 'en'
                                 ? 'EN'
                                 : provider.locale.languageCode == 'uz'
-                                    ? 'UZ'
-                                    : 'RU',
+                                ? 'UZ'
+                                : 'RU',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.textMain,
                             backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(100),
                               side: BorderSide(color: Colors.grey.shade200),
@@ -179,9 +188,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      
+
                       const Spacer(flex: 1),
-                      
+
                       // Hero Section
                       Center(
                         child: Container(
@@ -224,9 +233,9 @@ class _LoginPageState extends State<LoginPage> {
                           color: AppColors.textSecondary.withValues(alpha: 0.8),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 48),
-                      
+
                       // Input Fields
                       _buildTextField(
                         controller: _emailController,
@@ -244,20 +253,25 @@ class _LoginPageState extends State<LoginPage> {
                           setState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Remember me & Forgot Password
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           GestureDetector(
-                            onTap: () => setState(() => _rememberMe = !_rememberMe),
+                            onTap: () =>
+                                setState(() => _rememberMe = !_rememberMe),
                             child: Row(
                               children: [
                                 Icon(
-                                  _rememberMe ? TablerIcons.square_check_filled : TablerIcons.square,
-                                  color: _rememberMe ? AppColors.primary : AppColors.textSecondary,
+                                  _rememberMe
+                                      ? TablerIcons.square_check_filled
+                                      : TablerIcons.square,
+                                  color: _rememberMe
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
@@ -265,8 +279,12 @@ class _LoginPageState extends State<LoginPage> {
                                   'Eslab qolish',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _rememberMe ? AppColors.textMain : AppColors.textSecondary,
-                                    fontWeight: _rememberMe ? FontWeight.w600 : FontWeight.w400,
+                                    color: _rememberMe
+                                        ? AppColors.textMain
+                                        : AppColors.textSecondary,
+                                    fontWeight: _rememberMe
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                   ),
                                 ),
                               ],
@@ -285,9 +303,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Login Button
                       Consumer<AppProvider>(
                         builder: (context, provider, child) {
@@ -297,7 +315,9 @@ class _LoginPageState extends State<LoginPage> {
                               boxShadow: [
                                 if (!provider.isLoading)
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
                                     blurRadius: 20,
                                     offset: const Offset(0, 8),
                                   ),
@@ -349,9 +369,9 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                       ),
-                      
+
                       const Spacer(flex: 3),
-                      
+
                       // Copyright
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
@@ -466,4 +486,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

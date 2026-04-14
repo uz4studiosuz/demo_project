@@ -414,12 +414,21 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                           ),
                                         ),
                                       ),
-                                      Icon(
-                                        CupertinoIcons.pin_fill,
-                                        color: isFocused
-                                            ? const Color(0xFFD32F2F)
-                                            : AppColors.govNavy,
-                                        size: isFocused ? 34 : 28,
+                                      const SizedBox(height: 2),
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: isFocused
+                                              ? const Color(0xFFD32F2F)
+                                              : AppColors.govNavy,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                        ),
+                                        child: Icon(
+                                          Icons.home_rounded,
+                                          color: Colors.white,
+                                          size: isFocused ? 20 : 16,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -500,12 +509,21 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                       ],
                                     ),
                                   ),
-                                  Icon(
-                                    CupertinoIcons.pin_fill,
-                                    color: isFocused
-                                        ? const Color(0xFF6A1B9A)
-                                        : const Color(0xFF37474F),
-                                    size: 32,
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: isFocused
+                                          ? const Color(0xFF6A1B9A)
+                                          : const Color(0xFF37474F),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_city_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                                   ),
                                 ],
                               ),
