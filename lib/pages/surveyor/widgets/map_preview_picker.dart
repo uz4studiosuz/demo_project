@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -74,9 +75,9 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
       widget.onPositionChanged(_currentPosition);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
@@ -87,9 +88,8 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
     final LatLng? result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FullScreenMapPicker(
-          initialPosition: _currentPosition,
-        ),
+        builder: (context) =>
+            FullScreenMapPicker(initialPosition: _currentPosition),
       ),
     );
 
@@ -174,8 +174,8 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                 ),
                 const Center(
                   child: Icon(
-                    Icons.location_pin,
-                    size: 30,
+                    CupertinoIcons.pin_fill,
+                    size: 35,
                     color: AppColors.danger,
                   ),
                 ),
@@ -192,7 +192,10 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                             height: 15,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.my_location, color: AppColors.primary),
+                        : const Icon(
+                            Icons.my_location,
+                            color: AppColors.primary,
+                          ),
                   ),
                 ),
               ],

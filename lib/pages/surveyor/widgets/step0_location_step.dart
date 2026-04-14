@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -397,8 +398,8 @@ class _SelectedBuildingBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Bug Fix: location_on → location_pin (uchi tog'ri nuqtani ko'rsatadi)
-          const Icon(Icons.location_pin, color: Color(0xFF1976D2)),
+          // Bug Fix: location_on → location_solid (iPhone pin marker uchi tog'ri nuqtani ko'rsatadi)
+          const Icon(CupertinoIcons.pin_fill, color: Color(0xFF1976D2)),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
@@ -441,7 +442,7 @@ class _MapSection extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onOpenFullScreenMap,
-                  icon: const Icon(Icons.location_pin, size: 18),
+                  icon: const Icon(CupertinoIcons.pin_fill, size: 18),
                   label: const Text('Kartadan tanlash'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.govNavy,

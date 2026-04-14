@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../../theme/colors.dart';
 import '../../../utils/location_data.dart';
 
@@ -259,24 +260,50 @@ class _LocationPickerSectionState extends State<LocationPickerSection> {
     required String hint,
     bool enabled = true,
   }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-        prefixIcon: Icon(icon, size: 18, color: enabled ? AppColors.govNavy : AppColors.textSecondary),
-        hintText: hint,
-        hintStyle: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-        filled: true,
-        fillColor: enabled ? const Color(0xFFF5F6F8) : const Color(0xFFF0F0F0),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.govNavy, width: 1.5)),
-        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+    return DropdownSearch<T>(
+      enabled: enabled,
+      selectedItem: value,
+      items: (filter, loadProps) {
+        if (filter.isEmpty) return items;
+        return items.where((element) => element.toString().toLowerCase().contains(filter.toLowerCase())).toList();
+      },
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Qidirish...",
+            prefixIcon: const Icon(Icons.search, size: 20),
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.govNavy, width: 1.5)),
+          ),
+        ),
+        menuProps: MenuProps(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 4,
+        ),
       ),
-      items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(item.toString(), style: const TextStyle(fontSize: 13)))).toList(),
-      onChanged: enabled ? onChanged : null,
+      onSelected: enabled ? onChanged : null,
+      decoratorProps: DropDownDecoratorProps(
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          prefixIcon: Icon(icon, size: 18, color: enabled ? AppColors.govNavy : AppColors.textSecondary),
+          hintText: hint,
+          hintStyle: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          filled: true,
+          fillColor: enabled ? const Color(0xFFF5F6F8) : const Color(0xFFF0F0F0),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.govNavy, width: 1.5)),
+          disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        ),
+      ),
     );
   }
 }
+

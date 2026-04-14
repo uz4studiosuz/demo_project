@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -93,7 +94,9 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                   _currentPosition = position.center;
                 }
               },
-              interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
             ),
             children: [
               TileLayer(
@@ -115,7 +118,11 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             ],
           ),
           const Center(
-            child: Icon(Icons.location_pin, size: 50, color: AppColors.danger),
+            child: Icon(
+              CupertinoIcons.pin_fill,
+              size: 50,
+              color: AppColors.danger,
+            ),
           ),
           Positioned(
             right: 16,
@@ -151,7 +158,10 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
               onPressed: () {
                 Navigator.pop(context, _currentPosition);
               },
-              child: const Text('Joylashuvni tasdiqlash', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Joylashuvni tasdiqlash',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
