@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:beemor/pages/surveyor/add_family_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,7 +13,7 @@ import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import '../../../widgets/household_info_sheet.dart';
-import '../add_family_page.dart';
+import 'surveyor_household_actions.dart';
 import 'building_bottom_sheet.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -69,12 +70,12 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
   }
 
   void _toggleMapType() => setState(() {
-        _mapType = _mapType == 'y'
-            ? 'm'
-            : _mapType == 'm'
-                ? 's'
-                : 'y';
-      });
+    _mapType = _mapType == 'y'
+        ? 'm'
+        : _mapType == 'm'
+        ? 's'
+        : 'y';
+  });
 
   Future<void> _goToMyLocation() async {
     setState(() => _isLocationLoading = true);
@@ -330,9 +331,8 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                       final res = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => AddFamilyPage(
-                                            existing: h,
-                                          ),
+                                          builder: (_) =>
+                                              AddFamilyPage(existing: h),
                                         ),
                                       );
                                       if (res == true)
@@ -347,7 +347,9 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                       final confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Xonadonni o\'chirish'),
+                                          title: const Text(
+                                            'Xonadonni o\'chirish',
+                                          ),
                                           content: const Text(
                                             'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
                                           ),
@@ -447,9 +449,8 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                       final res = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => AddFamilyPage(
-                                            existing: h,
-                                          ),
+                                          builder: (_) =>
+                                              AddFamilyPage(existing: h),
                                         ),
                                       );
                                       if (res == true)
@@ -464,7 +465,9 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                       final confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Xonadonni o\'chirish'),
+                                          title: const Text(
+                                            'Xonadonni o\'chirish',
+                                          ),
                                           content: const Text(
                                             'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
                                           ),
@@ -535,7 +538,10 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                               ? const Color(0xFFD32F2F)
                                               : AppColors.govNavy,
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
                                         ),
                                         child: Icon(
                                           Icons.home_rounded,
@@ -569,64 +575,7 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                 context,
                                 apartments,
                                 onTapApartment: (apt) =>
-                                  showHouseholdInfoSheet(
-                                    context,
-                                    apt,
-                                    onEdit: () async {
-                                      Navigator.pop(context);
-                                      final provider = Provider.of<AppProvider>(
-                                        context,
-                                        listen: false,
-                                      );
-                                      final res = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AddFamilyPage(
-                                            existing: apt,
-                                          ),
-                                        ),
-                                      );
-                                      if (res == true)
-                                        provider.fetchHouseholds();
-                                    },
-                                    onDelete: () async {
-                                      Navigator.pop(context);
-                                      final provider = Provider.of<AppProvider>(
-                                        context,
-                                        listen: false,
-                                      );
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Xonadonni o\'chirish'),
-                                          content: const Text(
-                                            'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(ctx, false),
-                                              child: const Text('Bekor qilish'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(ctx, true),
-                                              child: const Text(
-                                                'O\'chirish',
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirm == true) {
-                                        await provider.deleteHousehold(apt.id);
-                                        provider.fetchHouseholds();
-                                      }
-                                    },
-                                  ),
+                                    showSurveyorHouseholdDetails(context, apt),
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -687,7 +636,10 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                           ? const Color(0xFF6A1B9A)
                                           : const Color(0xFF37474F),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.5,
+                                      ),
                                     ),
                                     child: const Icon(
                                       Icons.location_city_rounded,

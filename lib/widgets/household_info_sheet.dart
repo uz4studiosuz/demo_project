@@ -261,9 +261,7 @@ class _HeaderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      h.officialAddress.isNotEmpty
-                          ? h.officialAddress
-                          : 'Manzilsiz',
+                      '${h.tumanName ?? ''}',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -274,7 +272,7 @@ class _HeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${h.tumanName ?? ''}, ${h.mfyName ?? ''}',
+                      '${h.mfyName ?? ''}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
