@@ -12,6 +12,7 @@ import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import '../../../widgets/household_info_sheet.dart';
+import '../add_family_page.dart';
 import 'building_bottom_sheet.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -317,8 +318,64 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                 width: 36,
                                 height: 36,
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      showHouseholdInfoSheet(context, h),
+                                  onTap: () => showHouseholdInfoSheet(
+                                    context,
+                                    h,
+                                    onEdit: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final res = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddFamilyPage(
+                                            existing: h,
+                                          ),
+                                        ),
+                                      );
+                                      if (res == true)
+                                        provider.fetchHouseholds();
+                                    },
+                                    onDelete: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Xonadonni o\'chirish'),
+                                          content: const Text(
+                                            'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: const Text('Bekor qilish'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, true),
+                                              child: const Text(
+                                                'O\'chirish',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await provider.deleteHousehold(h.id);
+                                        provider.fetchHouseholds();
+                                      }
+                                    },
+                                  ),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: AppColors.govNavy,
@@ -378,8 +435,64 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                 width: isFocused ? 60 : 48,
                                 height: isFocused ? 66 : 54,
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      showHouseholdInfoSheet(context, h),
+                                  onTap: () => showHouseholdInfoSheet(
+                                    context,
+                                    h,
+                                    onEdit: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final res = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddFamilyPage(
+                                            existing: h,
+                                          ),
+                                        ),
+                                      );
+                                      if (res == true)
+                                        provider.fetchHouseholds();
+                                    },
+                                    onDelete: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Xonadonni o\'chirish'),
+                                          content: const Text(
+                                            'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: const Text('Bekor qilish'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, true),
+                                              child: const Text(
+                                                'O\'chirish',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await provider.deleteHousehold(h.id);
+                                        provider.fetchHouseholds();
+                                      }
+                                    },
+                                  ),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -456,7 +569,64 @@ class _HouseholdsMapPageState extends State<_HouseholdsMapPage> {
                                 context,
                                 apartments,
                                 onTapApartment: (apt) =>
-                                    showHouseholdInfoSheet(context, apt),
+                                  showHouseholdInfoSheet(
+                                    context,
+                                    apt,
+                                    onEdit: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final res = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddFamilyPage(
+                                            existing: apt,
+                                          ),
+                                        ),
+                                      );
+                                      if (res == true)
+                                        provider.fetchHouseholds();
+                                    },
+                                    onDelete: () async {
+                                      Navigator.pop(context);
+                                      final provider = Provider.of<AppProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Xonadonni o\'chirish'),
+                                          content: const Text(
+                                            'Rostdan ham bu xonadonni o\'chirmoqchimisiz?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: const Text('Bekor qilish'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, true),
+                                              child: const Text(
+                                                'O\'chirish',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await provider.deleteHousehold(apt.id);
+                                        provider.fetchHouseholds();
+                                      }
+                                    },
+                                  ),
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
