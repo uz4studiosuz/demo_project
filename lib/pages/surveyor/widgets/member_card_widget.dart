@@ -157,7 +157,9 @@ class MemberCardWidget extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: role,
+          value: roles.contains(role.replaceAll('’', '\'').trim()) 
+              ? role.replaceAll('’', '\'').trim() 
+              : (roles.isNotEmpty ? roles.last : null),
           isExpanded: true,
           style: const TextStyle(fontSize: 13, color: AppColors.textMain),
           onChanged: (v) {

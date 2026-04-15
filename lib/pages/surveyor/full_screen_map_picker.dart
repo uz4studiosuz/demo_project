@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:remixicon/remixicon.dart';
 import '../../additional/map_border.dart';
 import '../../theme/colors.dart';
 
@@ -77,9 +78,9 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: widget.initialPosition,
-              initialZoom: 16.0,
+              initialZoom: 20.0,
               minZoom: 5,
-              maxZoom: 18,
+              maxZoom: 22,
               onPositionChanged: (position, hasGesture) {
                 constrainMap(position, _mapController);
                 if (hasGesture) {
@@ -95,7 +96,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                 urlTemplate:
                     'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
                 userAgentPackageName: 'com.example.demoproject',
-                maxZoom: 20,
+                maxZoom: 22,
               ),
               if (kShowMapBorder)
                 PolylineLayer(
@@ -110,15 +111,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             ],
           ),
           Center(
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
+            child: Icon(Remix.focus_3_line, size: 40, color: AppColors.error),
           ),
           // Hint Card
           Positioned(
@@ -140,7 +133,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.primary, size: 24),
+                  Icon(Icons.info_outline, color: AppColors.warning, size: 24),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(

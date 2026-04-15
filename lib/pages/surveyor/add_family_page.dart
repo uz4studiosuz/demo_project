@@ -92,6 +92,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
   // ── Qo'shimcha a'zolar ───────────────────────────────────────────
   final List<_Member> _members = [];
 
+  static const String kHeadRole = 'Oila boshlig\'i';
+
   static const _roles = [
     'Turmush o\'rtog\'i',
     'Farzandi',
@@ -105,6 +107,12 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     'Buvisi',
     'Boshqa',
   ];
+
+  String _normalizeRole(String? role) {
+    if (role == null) return 'Boshqa';
+    // Apostrofni standartlashtirish (to'g'ri va qiyshiq apostroflar uchun)
+    return role.replaceAll('’', '\'').trim();
+  }
 
   bool _saving = false;
 
@@ -178,22 +186,38 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           '${h.buildingNumber}_${h.latitude.toStringAsFixed(4)}_${h.longitude.toStringAsFixed(4)}';
     }
 
-    final residents = h.residents;
-    if (residents.isNotEmpty) {
-      final head = residents.first;
-      _headFirstCtrl.text = head.firstName;
-      _headLastCtrl.text = head.lastName;
-      _headMiddleCtrl.text = head.middleName ?? '';
-      _headPhoneCtrl.text =
-          (head.phonePrimary == null || head.phonePrimary!.isEmpty)
-          ? '+998 '
-          : head.phonePrimary!;
-      _headGender = head.gender;
-      _headBirthDate = head.birthDate;
+    final allResidents = h.residents;
+    if (allResidents.isEmpty) return;
+
+    // 1. Oila boshlig'ini topish (rolda 'Oila boshlig'i' bo'lgan birinchi shaxs)
+    ResidentModel? head;
+    try {
+      head = allResidents.firstWhere(
+        (r) => _normalizeRole(r.role) == kHeadRole,
+      );
+    } catch (_) {
+      // Agar topilmasa, birinchisini head deb olamiz
+      head = allResidents.first;
     }
 
-    for (int i = 1; i < residents.length; i++) {
-      final r = residents[i];
+    _headFirstCtrl.text = head.firstName;
+    _headLastCtrl.text = head.lastName;
+    _headMiddleCtrl.text = head.middleName ?? '';
+    _headPhoneCtrl.text =
+        (head.phonePrimary == null || head.phonePrimary!.isEmpty)
+            ? '+998 '
+            : head.phonePrimary!;
+    _headGender = head.gender;
+    _headBirthDate = head.birthDate;
+
+    // 2. Qolganlarni a'zolar ro'yxatiga qo'shish
+    for (final r in allResidents) {
+      if (r.id == head.id) continue;
+      // Agar kutilmaganda bazada ro'li 'Oila boshlig'i' bo'lgan boshqalar bo'lsa, 
+      // ularni oddiy a'zo sifatida o'tkazamiz (dublikat bo'lmasligi uchun)
+      final normalizedRole = _normalizeRole(r.role);
+      if (normalizedRole == kHeadRole) continue; 
+
       _members.add(
         _Member(
           firstName: r.firstName,
@@ -201,7 +225,7 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           middleName: r.middleName ?? '',
           phone: r.phonePrimary ?? '',
           gender: r.gender,
-          role: r.role ?? 'Boshqa',
+          role: normalizedRole,
           birthDate: r.birthDate,
         ),
       );
@@ -250,7 +274,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       builder: (context) => AlertDialog(
         title: const Text('Xonadonni o\'chirish'),
         content: const Text(
-            'Ushbu xonadon va unga tegishli barcha oila a\'zolarini o\'chirib tashlamoqchimisiz?'),
+          'Ushbu xonadon va unga tegishli barcha oila a\'zolarini o\'chirib tashlamoqchimisiz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -267,8 +292,10 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
     if (confirm == true && mounted) {
       setState(() => _saving = true);
-      final ok = await Provider.of<AppProvider>(context, listen: false)
-          .deleteHousehold(widget.existing!.id);
+      final ok = await Provider.of<AppProvider>(
+        context,
+        listen: false,
+      ).deleteHousehold(widget.existing!.id);
       if (mounted) {
         setState(() => _saving = false);
         if (ok) {
@@ -318,7 +345,12 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
     final residents = <ResidentModel>[
       ResidentModel(
         id: _isEdit && widget.existing!.residents.isNotEmpty
-            ? widget.existing!.residents.first.id
+            ? widget.existing!.residents
+                .firstWhere(
+                  (r) => _normalizeRole(r.role) == kHeadRole,
+                  orElse: () => widget.existing!.residents.first,
+                )
+                .id
             : 0,
         householdId: household.id,
         firstName: _headFirstCtrl.text.trim(),
@@ -326,11 +358,12 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
         middleName: _headMiddleCtrl.text.trim().isEmpty
             ? null
             : _headMiddleCtrl.text.trim(),
-        phonePrimary: _headPhoneCtrl.text.trim() == '+998'
+        phonePrimary: _headPhoneCtrl.text.trim() == '+998' ||
+                _headPhoneCtrl.text.trim() == '+998 '
             ? null
             : _headPhoneCtrl.text.trim(),
         gender: _headGender,
-        role: 'Oila boshlig\'i',
+        role: kHeadRole,
         birthDate: _headBirthDate,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -346,7 +379,9 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               middleName: m.middleCtrl.text.trim().isEmpty
                   ? null
                   : m.middleCtrl.text.trim(),
-              phonePrimary: (m.phoneCtrl.text.trim() == '+998' || !m.showPhone)
+              phonePrimary: (m.phoneCtrl.text.trim() == '+998' ||
+                              m.phoneCtrl.text.trim() == '+998 ' ||
+                              !m.showPhone)
                   ? null
                   : m.phoneCtrl.text.trim(),
               gender: m.gender,
@@ -360,8 +395,13 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
 
     bool ok;
     if (_isEdit) {
+      print('🔵 [Tahrirlash] Xonadon ID: ${household.id}');
       ok = await provider.updateHouseholdWithResidents(household, residents);
+      if (!ok && mounted) {
+        _snack('Yangilashda xatolik yuz berdi. ID: ${household.id}');
+      }
     } else {
+      print('🟢 [Yangi] Xonadon yaratilmoqda');
       ok = await provider.saveHouseholdWithResidents(household, residents);
     }
 
@@ -567,7 +607,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
             const SizedBox(width: 8),
             IconButton(
               onPressed: _saving ? null : _deleteHousehold,
-              icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 22),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+                size: 22,
+              ),
               tooltip: 'O\'chirish',
             ),
           ],
@@ -723,7 +767,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           onGenderChanged: (i, g) => setState(() => _members[i].gender = g),
           onRoleChanged: (i, r) => setState(() => _members[i].role = r),
           onPhoneToggle: (i, v) => setState(() => _members[i].showPhone = v),
-          onBirthDateChanged: (i, d) => setState(() => _members[i].birthDate = d),
+          onBirthDateChanged: (i, d) =>
+              setState(() => _members[i].birthDate = d),
         );
       default:
         return Step3PreviewStep(
@@ -805,43 +850,56 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           return;
                         }
 
-                        // Dublikatlarni tekshirish (faqat 0-qadamda)
-                        final provider = Provider.of<AppProvider>(context, listen: false);
-                        final hNum = _houseCtrl.text.trim();
-                        final bNum = _buildingCtrl.text.trim();
-                        final aNum = _apartmentCtrl.text.trim();
-                        bool isDuplicate = provider.households.any((h) {
-                           if (_isEdit && widget.existing?.id == h.id) return false;
-                           if (h.tumanName != _tuman) return false;
-                           if (h.mfyName != _mfy) return false;
-                           if (h.streetName != _street) return false;
-                           if (h.propertyType != _propertyType) return false;
+                        // Dublikatlarni tekshirish (faqat YANGI xonadon yaratishda)
+                        // Tahrirlash rejimida tekshiruv o'tkazilmaydi
+                        if (!_isEdit) {
+                          final provider = Provider.of<AppProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final hNum = _houseCtrl.text.trim();
+                          final bNum = _buildingCtrl.text.trim();
+                          final aNum = _apartmentCtrl.text.trim();
+                          bool isDuplicate = provider.households.any((h) {
+                            if (h.tumanName != _tuman) return false;
+                            if (h.mfyName != _mfy) return false;
+                            if (h.streetName != _street) return false;
+                            if (h.propertyType != _propertyType) return false;
 
-                           if (_propertyType == kHouse) {
-                             return h.houseNumber == hNum;
-                           } else {
-                             return h.buildingNumber == bNum && h.apartment == aNum;
-                           }
-                        });
-
-                        if (isDuplicate) {
-                           _snack("Bunday manzilga ega xonadon allaqachon mavjud!");
-                           return;
-                        }
-
-                        // Joylashuvning ushbu (aynan) nuqtasida boshqa uy yo'qligini tekshirish (icon ustma-ust tushmasligi uchun)
-                        if (_propertyType == kHouse) {
-                          bool isDuplicateLocation = provider.households.any((h) {
-                            if (_isEdit && widget.existing?.id == h.id) return false;
-                            if (h.propertyType != kHouse) return false;
-                            // 5 xonali aniqlikgacha tekshirish (1 metrgacha aniqlik)
-                            return h.latitude.toStringAsFixed(5) == _position.latitude.toStringAsFixed(5) && 
-                                   h.longitude.toStringAsFixed(5) == _position.longitude.toStringAsFixed(5);
+                            if (_propertyType == kHouse) {
+                              return h.houseNumber == hNum;
+                            } else {
+                              return h.buildingNumber == bNum &&
+                                  h.apartment == aNum;
+                            }
                           });
 
-                          if (isDuplicateLocation) {
-                             _snack("Ushbu xarita nuqtasida (lokatsiyada) boshqa uy mavjud. Iltimos, xaritadan aynan ushbu uyning ustiga belgilang!");
-                             return;
+                          if (isDuplicate) {
+                            _snack(
+                              "Bunday manzilga ega xonadon allaqachon mavjud!",
+                            );
+                            return;
+                          }
+
+                          // Joylashuvning ushbu (aynan) nuqtasida boshqa uy yo'qligini tekshirish
+                          if (_propertyType == kHouse) {
+                            bool isDuplicateLocation = provider.households.any((
+                              h,
+                            ) {
+                              if (h.propertyType != kHouse) return false;
+                              // 5 xonali aniqlikgacha tekshirish (1 metrgacha aniqlik)
+                              return h.latitude.toStringAsFixed(5) ==
+                                      _position.latitude.toStringAsFixed(5) &&
+                                  h.longitude.toStringAsFixed(5) ==
+                                      _position.longitude.toStringAsFixed(5);
+                            });
+
+                            if (isDuplicateLocation) {
+                              _snack(
+                                "Ushbu xarita nuqtasida (lokatsiyada) boshqa uy mavjud. Iltimos, xaritadan aynan ushbu uyning ustiga belgilang!",
+                              );
+                              return;
+                            }
                           }
                         }
 
@@ -853,8 +911,12 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           return;
                         }
                         final phone = _headPhoneCtrl.text.trim();
-                        if (phone != '+998' && phone != '+998 ' && !_isValidPhone(phone)) {
-                          _snack('Telefon raqami noto\'g\'ri formatda (+998901234567)');
+                        if (phone != '+998' &&
+                            phone != '+998 ' &&
+                            !_isValidPhone(phone)) {
+                          _snack(
+                            'Telefon raqami noto\'g\'ri formatda (+998901234567)',
+                          );
                           return;
                         }
 
@@ -863,13 +925,19 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                         for (final m in _members) {
                           if (m.firstCtrl.text.trim().isNotEmpty) {
                             if (m.lastCtrl.text.trim().isEmpty) {
-                              _snack('${m.firstCtrl.text}ning familiyasini kiriting');
+                              _snack(
+                                '${m.firstCtrl.text}ning familiyasini kiriting',
+                              );
                               return;
                             }
                             if (m.showPhone) {
                               final p = m.phoneCtrl.text.trim();
-                              if (p != '+998' && p != '+998 ' && !_isValidPhone(p)) {
-                                _snack('${m.firstCtrl.text}ning telefon raqami noto\'g\'ri');
+                              if (p != '+998' &&
+                                  p != '+998 ' &&
+                                  !_isValidPhone(p)) {
+                                _snack(
+                                  '${m.firstCtrl.text}ning telefon raqami noto\'g\'ri',
+                                );
                                 return;
                               }
                             }
@@ -886,7 +954,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               ),
               child: _saving
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(_step < 3 ? 'Davom etish' : 'Bazaga yuklash'),
+                  : Text(
+                      _step < 3
+                          ? 'Davom etish'
+                          : (_isEdit ? 'Yangilash' : 'Bazaga yuklash'),
+                    ),
             ),
           ),
         ],

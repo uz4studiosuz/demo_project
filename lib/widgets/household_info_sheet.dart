@@ -9,6 +9,8 @@ void showHouseholdInfoSheet(
   BuildContext context,
   HouseholdModel household, {
   VoidCallback? onGetDirections,
+  VoidCallback? onEdit,
+  VoidCallback? onDelete,
 }) {
   showModalBottomSheet(
     context: context,
@@ -17,6 +19,8 @@ void showHouseholdInfoSheet(
     builder: (context) => _HouseholdInfoSheet(
       household: household,
       onGetDirections: onGetDirections,
+      onEdit: onEdit,
+      onDelete: onDelete,
     ),
   );
 }
@@ -25,22 +29,41 @@ void showHouseholdInfoSheet(
 class _HouseholdInfoSheet extends StatelessWidget {
   final HouseholdModel household;
   final VoidCallback? onGetDirections;
-  const _HouseholdInfoSheet({required this.household, this.onGetDirections});
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  const _HouseholdInfoSheet({
+    required this.household,
+    this.onGetDirections,
+    this.onEdit,
+    this.onDelete,
+  });
 
   // Yosh hisoblash
   int? _age(DateTime? bDay) {
     if (bDay == null) return null;
     final now = DateTime.now();
     int age = now.year - bDay.year;
-    if (now.month < bDay.month || (now.month == bDay.month && now.day < bDay.day)) age--;
+    if (now.month < bDay.month ||
+        (now.month == bDay.month && now.day < bDay.day))
+      age--;
     return age;
   }
 
   // Sana formatlash: "15-may, 2003"
   String _fmtDate(DateTime d) {
     const months = [
-      'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
-      'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr',
+      'yanvar',
+      'fevral',
+      'mart',
+      'aprel',
+      'may',
+      'iyun',
+      'iyul',
+      'avgust',
+      'sentabr',
+      'oktabr',
+      'noyabr',
+      'dekabr',
     ];
     return '${d.day}-${months[d.month - 1]}, ${d.year}';
   }
@@ -65,7 +88,8 @@ class _HouseholdInfoSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 4),
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(10),
@@ -94,15 +118,17 @@ class _HouseholdInfoSheet extends StatelessWidget {
               },
             ),
           ),
-          
+
           if (onGetDirections != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.pop(context); // Jo'nab ketishdan oldin oynani yopamiz
+                    Navigator.pop(
+                      context,
+                    ); // Jo'nab ketishdan oldin oynani yopamiz
                     onGetDirections!();
                   },
                   icon: const Icon(CupertinoIcons.location_fill),
@@ -120,6 +146,63 @@ class _HouseholdInfoSheet extends StatelessWidget {
                     elevation: 0,
                   ),
                 ),
+              ),
+            ),
+          if (onEdit != null || onDelete != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Row(
+                children: [
+                  if (onEdit != null)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text(
+                          'Tahrirlash',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.govNavy,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  if (onEdit != null && onDelete != null)
+                    const SizedBox(width: 12),
+                  if (onDelete != null)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text(
+                          'O\'chirish',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade50,
+                          foregroundColor: Colors.red.shade700,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(color: Colors.red.shade200),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             )
           else
@@ -160,7 +243,8 @@ class _HeaderCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 46, height: 46,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: AppColors.govNavy.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
@@ -177,7 +261,9 @@ class _HeaderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      h.officialAddress.isNotEmpty ? h.officialAddress : 'Manzilsiz',
+                      h.officialAddress.isNotEmpty
+                          ? h.officialAddress
+                          : 'Manzilsiz',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -189,7 +275,10 @@ class _HeaderCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${h.tumanName ?? ''}, ${h.mfyName ?? ''}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -205,11 +294,20 @@ class _HeaderCard extends StatelessWidget {
               if (h.streetName != null)
                 _Chip(icon: Icons.signpost_rounded, label: h.streetName!),
               if (!isApt && h.houseNumber != null)
-                _Chip(icon: Icons.cottage_rounded, label: 'Uy: ${h.houseNumber}'),
+                _Chip(
+                  icon: Icons.cottage_rounded,
+                  label: 'Uy: ${h.houseNumber}',
+                ),
               if (isApt && h.buildingNumber != null)
-                _Chip(icon: Icons.domain_rounded, label: '${h.buildingNumber}-bino'),
+                _Chip(
+                  icon: Icons.domain_rounded,
+                  label: '${h.buildingNumber}-bino',
+                ),
               if (isApt && h.apartment != null)
-                _Chip(icon: Icons.door_front_door_rounded, label: '${h.apartment}-kvartira'),
+                _Chip(
+                  icon: Icons.door_front_door_rounded,
+                  label: '${h.apartment}-kvartira',
+                ),
               if (isApt && h.floor != null)
                 _Chip(icon: Icons.layers_rounded, label: '${h.floor}-qavat'),
               _Chip(
@@ -251,7 +349,10 @@ class _ResidentCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: isHead
-            ? Border.all(color: AppColors.govNavy.withValues(alpha: 0.3), width: 1.5)
+            ? Border.all(
+                color: AppColors.govNavy.withValues(alpha: 0.3),
+                width: 1.5,
+              )
             : null,
         boxShadow: [
           BoxShadow(
@@ -266,7 +367,8 @@ class _ResidentCard extends StatelessWidget {
         children: [
           // Avatar
           Container(
-            width: 46, height: 46,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: isFemale
                   ? const Color(0xFFFCE4EC)
@@ -289,7 +391,9 @@ class _ResidentCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        r.displayFullName.isNotEmpty ? r.displayFullName : 'Ismsiz',
+                        r.displayFullName.isNotEmpty
+                            ? r.displayFullName
+                            : 'Ismsiz',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -299,7 +403,10 @@ class _ResidentCard extends StatelessWidget {
                     ),
                     if (isHead)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF8E1),
                           borderRadius: BorderRadius.circular(8),
@@ -319,11 +426,18 @@ class _ResidentCard extends StatelessWidget {
                 // Role
                 Row(
                   children: [
-                    const Icon(CupertinoIcons.person_badge_plus, size: 12, color: AppColors.textSecondary),
+                    const Icon(
+                      CupertinoIcons.person_badge_plus,
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       r.role ?? 'Oila a\'zosi',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -332,16 +446,26 @@ class _ResidentCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(CupertinoIcons.calendar, size: 12, color: AppColors.textSecondary),
+                      const Icon(
+                        CupertinoIcons.calendar,
+                        size: 12,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         fmtDate(r.birthDate!),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       if (age != null) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.govNavy.withValues(alpha: 0.09),
                             borderRadius: BorderRadius.circular(6),
@@ -360,15 +484,24 @@ class _ResidentCard extends StatelessWidget {
                   ),
                 ],
                 // Phone
-                if (r.phonePrimary != null && r.phonePrimary!.isNotEmpty && r.phonePrimary != '+998') ...[
+                if (r.phonePrimary != null &&
+                    r.phonePrimary!.isNotEmpty &&
+                    r.phonePrimary != '+998') ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(CupertinoIcons.phone, size: 12, color: AppColors.textSecondary),
+                      const Icon(
+                        CupertinoIcons.phone,
+                        size: 12,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         r.phonePrimary!,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -403,7 +536,14 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: c),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: c, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: c,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

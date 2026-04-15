@@ -82,7 +82,10 @@ class HouseholdModel {
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
       residents: json['residents'] != null 
-          ? (json['residents'] as List).map((x) => ResidentModel.fromJson(x)).toList()
+          ? (json['residents'] as List)
+              .map((x) => ResidentModel.fromJson(x))
+              .where((r) => r.isActive)
+              .toList()
           : [],
       tumanName: json['tuman_name'],
       qfyName: json['qfy_name'],

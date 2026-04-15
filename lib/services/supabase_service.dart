@@ -103,6 +103,7 @@ class SupabaseService {
   /// Xonadonni yangilaydi.
   static Future<HouseholdModel?> updateHousehold(HouseholdModel h) async {
     try {
+      print('🔵 [SupabaseService.updateHousehold] ID: ${h.id}');
       final payload = {
         'official_address': h.officialAddress,
         if (h.houseNumber != null) 'house_number': h.houseNumber,
@@ -139,7 +140,10 @@ class SupabaseService {
     try {
       await _db
           .from('households')
-          .update({'is_active': false, 'updated_at': DateTime.now().toIso8601String()})
+          .update({
+            'is_active': false,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', id);
       return true;
     } catch (e) {
@@ -163,17 +167,14 @@ class SupabaseService {
         if (r.fullName != null) 'full_name': r.fullName,
         if (r.phonePrimary != null) 'phone_primary': r.phonePrimary,
         if (r.phoneSecondary != null) 'phone_secondary': r.phoneSecondary,
-        if (r.birthDate != null) 'birth_date': r.birthDate!.toIso8601String().split('T')[0],
+        if (r.birthDate != null)
+          'birth_date': r.birthDate!.toIso8601String().split('T')[0],
         'gender': r.gender,
         if (r.role != null) 'role': r.role,
         'is_active': true,
       };
 
-      final res = await _db
-          .from('residents')
-          .insert(payload)
-          .select()
-          .single();
+      final res = await _db.from('residents').insert(payload).select().single();
 
       return ResidentModel.fromJson(res);
     } catch (e) {
@@ -192,7 +193,8 @@ class SupabaseService {
         if (r.fullName != null) 'full_name': r.fullName,
         if (r.phonePrimary != null) 'phone_primary': r.phonePrimary,
         if (r.phoneSecondary != null) 'phone_secondary': r.phoneSecondary,
-        if (r.birthDate != null) 'birth_date': r.birthDate!.toIso8601String().split('T')[0],
+        if (r.birthDate != null)
+          'birth_date': r.birthDate!.toIso8601String().split('T')[0],
         'gender': r.gender,
         if (r.role != null) 'role': r.role,
         'updated_at': DateTime.now().toIso8601String(),
@@ -217,7 +219,10 @@ class SupabaseService {
     try {
       await _db
           .from('residents')
-          .update({'is_active': false, 'updated_at': DateTime.now().toIso8601String()})
+          .update({
+            'is_active': false,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', id);
       return true;
     } catch (e) {
@@ -231,7 +236,7 @@ class SupabaseService {
     try {
       await _db
           .from('residents')
-          .update({'is_active': false})
+          .delete()
           .eq('household_id', householdId);
     } catch (e) {
       print('[SupabaseService.deleteResidentsByHousehold] Error: $e');

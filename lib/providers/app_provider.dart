@@ -116,7 +116,9 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<bool> saveHouseholdWithResidents(
-      HouseholdModel household, List<ResidentModel> residents) async {
+    HouseholdModel household,
+    List<ResidentModel> residents,
+  ) async {
     _isLoading = true;
     notifyListeners();
 
@@ -126,19 +128,21 @@ class AppProvider extends ChangeNotifier {
     if (newHh != null) {
       // 2. Residentlarni yaratish
       for (final res in residents) {
-        await SupabaseService.createResident(ResidentModel(
-          id: 0,
-          householdId: newHh.id,
-          firstName: res.firstName,
-          lastName: res.lastName,
-          middleName: res.middleName,
-          phonePrimary: res.phonePrimary,
-          gender: res.gender,
-          role: res.role,
-          birthDate: res.birthDate,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ));
+        await SupabaseService.createResident(
+          ResidentModel(
+            id: 0,
+            householdId: newHh.id,
+            firstName: res.firstName,
+            lastName: res.lastName,
+            middleName: res.middleName,
+            phonePrimary: res.phonePrimary,
+            gender: res.gender,
+            role: res.role,
+            birthDate: res.birthDate,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
       }
 
       await fetchHouseholds();
@@ -172,13 +176,18 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<bool> updateHouseholdWithResidents(
-      HouseholdModel household, List<ResidentModel> residents) async {
+    HouseholdModel household,
+    List<ResidentModel> residents,
+  ) async {
     _isLoading = true;
     notifyListeners();
+
+    print('🔵 [AppProvider.updateHouseholdWithResidents] ID: ${household.id}');
 
     // 1. Xonadonni yangilash
     final updated = await SupabaseService.updateHousehold(household);
     if (updated == null) {
+      print('❌ [AppProvider] Xonadonni yangilashda xatolik (updated == null)');
       _errorMessage = 'Xonadonni yangilashda xatolik';
       _isLoading = false;
       notifyListeners();
@@ -190,19 +199,21 @@ class AppProvider extends ChangeNotifier {
 
     // 3. Yangi residentlar qo'shish
     for (final res in residents) {
-      await SupabaseService.createResident(ResidentModel(
-        id: 0,
-        householdId: updated.id,
-        firstName: res.firstName,
-        lastName: res.lastName,
-        middleName: res.middleName,
-        phonePrimary: res.phonePrimary,
-        gender: res.gender,
-        role: res.role,
-        birthDate: res.birthDate,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ));
+      await SupabaseService.createResident(
+        ResidentModel(
+          id: 0,
+          householdId: updated.id,
+          firstName: res.firstName,
+          lastName: res.lastName,
+          middleName: res.middleName,
+          phonePrimary: res.phonePrimary,
+          gender: res.gender,
+          role: res.role,
+          birthDate: res.birthDate,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
     }
 
     await fetchHouseholds();
