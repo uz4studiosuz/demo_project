@@ -6,11 +6,12 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import '../../theme/colors.dart';
 
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
+import 'utils/smooth_anim.dart';
+import 'utils/navigation_helpers.dart';
 
 class DriverMapPage extends StatefulWidget {
   final LatLng destination;
@@ -30,38 +31,20 @@ class DriverMapPage extends StatefulWidget {
   State<DriverMapPage> createState() => _DriverMapPageState();
 }
 
-class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateMixin {
+class _DriverMapPageState extends State<DriverMapPage>
+    with TickerProviderStateMixin, SmoothMapAnimationMixin<DriverMapPage>, NavigationHelpersMixin {
   final MapController _mapController = MapController();
   StreamSubscription<Position>? _positionStream;
   bool _isLoading = true;
-  bool _isMapReady = false; // FlutterMap render bo'lguncha MapController ishlatilmaydi
+  bool _isMapReady =
+      false; // FlutterMap render bo'lguncha MapController ishlatilmaydi
 
   // ─── Smooth interpolation ──────────────────────────────────────
   LatLng? _rawPosition;
-  LatLng? _displayPosition;
   double _rawHeading = 0.0;
-  double _displayHeading = 0.0;
-  double _displayMapRotation = 0.0;
+  // displayPosition, displayHeading, displayMapRotation endi mixin'da
 
-  // Animatsiya controllerlari
-  AnimationController? _moveAnimController;
-  AnimationController? _headingAnimController;
-  Animation<double>? _latAnim;
-  Animation<double>? _lngAnim;
-  Animation<double>? _headingAnim;
-  Animation<double>? _mapRotationAnim;
-
-  // ─── Route state ───────────────────────────────────────────────
-  List<LatLng> _routePoints = [];
-  List<List<LatLng>> _alternativeRoutes = [];
-  List<dynamic> _turnSteps = [];
-  String _distance = '';
-  String _duration = '';
-  bool _isRouteLoading = false;
-
-  // ─── Navigation ────────────────────────────────────────────────
-  // ─── Navigation ────────────────────────────────────────────────
-  bool _isNavigationStarted = false;
+  // ─── Route state & Navigation (endi mixin'da bo'lganlar)
   double _currentSpeed = 0.0;
   bool _isPatientInfoExpanded = false;
 
@@ -76,7 +59,6 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
 
   // ─── Map layer ─────────────────────────────────────────────────
   String _mapLayer = 'm';
-  bool _followUser = true;
 
   // ─── Timers ────────────────────────────────────────────────────
   Timer? _routeRefreshTimer;
@@ -85,75 +67,6 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
   void initState() {
     super.initState();
     _initLocation();
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  SMOOTH ANIMATION
-  // ═══════════════════════════════════════════════════════════════
-
-  double _shortestRotation(double from, double to) {
-    double diff = (to - from) % 360;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    return diff;
-  }
-
-  void _animateToNewPosition(LatLng newPos, double newHeading) {
-    _moveAnimController?.stop();
-    _headingAnimController?.stop();
-    _moveAnimController?.dispose();
-    _headingAnimController?.dispose();
-
-    final oldPos = _displayPosition ?? newPos;
-    final oldHeading = _displayHeading;
-    final oldMapRotation = _displayMapRotation;
-
-    // Pozitsiya — 800ms silliq
-    _moveAnimController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _latAnim = Tween<double>(begin: oldPos.latitude, end: newPos.latitude)
-        .animate(CurvedAnimation(parent: _moveAnimController!, curve: Curves.easeInOut));
-    _lngAnim = Tween<double>(begin: oldPos.longitude, end: newPos.longitude)
-        .animate(CurvedAnimation(parent: _moveAnimController!, curve: Curves.easeInOut));
-
-    // Heading — 500ms silliq
-    _headingAnimController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    final headingDiff = _shortestRotation(oldHeading, newHeading);
-    _headingAnim = Tween<double>(begin: oldHeading, end: oldHeading + headingDiff)
-        .animate(CurvedAnimation(parent: _headingAnimController!, curve: Curves.easeOut));
-
-    final targetMapRotation = -newHeading;
-    final mapRotDiff = _shortestRotation(oldMapRotation, targetMapRotation);
-    _mapRotationAnim = Tween<double>(begin: oldMapRotation, end: oldMapRotation + mapRotDiff)
-        .animate(CurvedAnimation(parent: _headingAnimController!, curve: Curves.easeOut));
-
-    _moveAnimController!.addListener(() {
-      if (!mounted) return;
-      final animatedPos = LatLng(_latAnim!.value, _lngAnim!.value);
-      setState(() => _displayPosition = animatedPos);
-      if (_followUser && _isMapReady) {
-        _mapController.move(animatedPos, _mapController.camera.zoom);
-      }
-    });
-
-    _headingAnimController!.addListener(() {
-      if (!mounted) return;
-      setState(() {
-        _displayHeading = _headingAnim!.value;
-        _displayMapRotation = _mapRotationAnim!.value;
-      });
-      if (_followUser && _isNavigationStarted && _isMapReady) {
-        _mapController.rotate(_mapRotationAnim!.value);
-      }
-    });
-
-    _moveAnimController!.forward();
-    _headingAnimController!.forward();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -196,9 +109,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
       if (mounted) {
         setState(() {
           _rawPosition = startLatLng;
-          _displayPosition = startLatLng;
+          displayPosition = startLatLng;
           _rawHeading = pos.heading;
-          _displayHeading = pos.heading;
+          displayHeading = pos.heading;
           _isLoading = false;
         });
         _fetchRoute();
@@ -214,7 +127,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
 
       // Har 10 sekundda marshrutni yangilash
       _routeRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-        if (_isNavigationStarted && !_isRouteLoading) {
+        if (isNavigationStarted && !isRouteLoading) {
           _fetchRoute();
         }
       });
@@ -235,13 +148,16 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
     double newHeading = _rawHeading;
 
     // Tezlik > 1 m/s bo'lganda heading yangilanadi
-    if (position.speed > 1.0 && position.heading.isFinite && position.heading != 0.0) {
+    if (position.speed > 1.0 &&
+        position.heading.isFinite &&
+        position.heading != 0.0) {
       newHeading = position.heading;
     } else if (_rawPosition != null) {
       // Emulator uchun yoki past tezlikda harakatlanganda kordinatalar orqali hisoblash
-      final dist = _latLngDistance(_rawPosition!, newPos);
-      if (dist > 0.0000005) { // Juda kichik harakatlarda sakrash bo'lmasligi uchun
-        newHeading = _bearingBetween(_rawPosition!, newPos);
+      final dist = latLngDistance(_rawPosition!, newPos);
+      if (dist > 0.0000005) {
+        // Juda kichik harakatlarda sakrash bo'lmasligi uchun
+        newHeading = bearingBetween(_rawPosition!, newPos);
       }
     }
 
@@ -249,15 +165,22 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
       _currentSpeed = position.speed; // m/s -> biz keyin x/h ga o'tkazamiz
     });
 
-    if (_isNavigationStarted) {
-      _followUser = true; // Navigatsiya davrida haydovchi markazdan siljimaydi
+    if (isNavigationStarted) {
+      followUser = true; // Navigatsiya davrida haydovchi markazdan siljimaydi
     }
 
     _rawPosition = newPos;
     _rawHeading = newHeading;
-    _animateToNewPosition(newPos, newHeading);
+    animateToNewPosition(
+      newPos: newPos,
+      newHeading: newHeading,
+      mapController: _mapController,
+      followUser: followUser,
+      isMapReady: _isMapReady,
+      isNavigationStarted: isNavigationStarted,
+    );
 
-    if (_routePoints.isEmpty && !_isRouteLoading) {
+    if (routePoints.isEmpty && !isRouteLoading) {
       _fetchRoute();
     }
   }
@@ -269,11 +192,12 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
   Future<void> _fetchRoute() async {
     final pos = _rawPosition;
     if (pos == null) return;
-    setState(() => _isRouteLoading = true);
+    setState(() => isRouteLoading = true);
 
     try {
       final start = '${pos.longitude},${pos.latitude}';
-      final end = '${widget.destination.longitude},${widget.destination.latitude}';
+      final end =
+          '${widget.destination.longitude},${widget.destination.latitude}';
       final url = Uri.parse(
         'http://router.project-osrm.org/route/v1/driving/$start;$end?overview=full&geometries=geojson&steps=true&alternatives=true',
       );
@@ -284,247 +208,56 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
         if (data['routes'] != null && data['routes'].isNotEmpty) {
           final mainRoute = data['routes'][0];
           final List<dynamic> mainCoords = mainRoute['geometry']['coordinates'];
-          _routePoints = mainCoords.map((c) => LatLng(c[1], c[0])).toList();
+          routePoints = mainCoords.map((c) => LatLng(c[1], c[0])).toList();
 
-          _alternativeRoutes = [];
+          alternativeRoutes = [];
           for (int i = 1; i < data['routes'].length; i++) {
             final altRoute = data['routes'][i];
             final List<dynamic> altCoords = altRoute['geometry']['coordinates'];
-            _alternativeRoutes.add(altCoords.map((c) => LatLng(c[1], c[0])).toList());
+            alternativeRoutes.add(
+              altCoords.map((c) => LatLng(c[1], c[0])).toList(),
+            );
           }
 
           final distMeters = mainRoute['distance'] ?? 0.0;
           final durSeconds = mainRoute['duration'] ?? 0.0;
-          _distance = (distMeters / 1000).toStringAsFixed(1);
-          _duration = (durSeconds / 60).round().toString();
+          distance = (distMeters / 1000).toStringAsFixed(1);
+          duration = (durSeconds / 60).round().toString();
 
           if (mainRoute['legs'] != null && mainRoute['legs'].isNotEmpty) {
-            _turnSteps = mainRoute['legs'][0]['steps'] ?? [];
+            turnSteps = mainRoute['legs'][0]['steps'] ?? [];
           }
 
           if (mounted) {
             setState(() {});
-            if (!_isNavigationStarted) _centerOnRoute();
+            if (!isNavigationStarted) {
+              centerOnRoute(
+                mapController: _mapController,
+                isMapReady: _isMapReady,
+                destination: widget.destination,
+              );
+            }
           }
         }
       }
     } catch (e) {
       debugPrint('Route fetch error: $e');
     } finally {
-      if (mounted) setState(() => _isRouteLoading = false);
+      if (mounted) setState(() => isRouteLoading = false);
     }
   }
 
-  void _centerOnRoute() {
-    if (!_isMapReady) return;
-    if (_routePoints.isEmpty && _displayPosition == null) return;
-    final points = _routePoints.isNotEmpty
-        ? _routePoints
-        : [_displayPosition!, widget.destination];
-    final bounds = LatLngBounds.fromPoints(points);
-    _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.only(top: 80, left: 40, right: 40, bottom: 180),
-      ),
-    );
-  }
-
-  /// Marshrutning birinchi 2 nuqtasidan boshlang'ich yo'nalishni hisoblab beradi
-  double _calcRouteHeading() {
-    if (_routePoints.length < 2 || _displayPosition == null) return _rawHeading;
-    // Hozirgi pozitsiyaga eng yaqin nuqtani topamiz
-    int nearestIdx = 0;
-    double minDist = double.infinity;
-    for (int i = 0; i < _routePoints.length; i++) {
-      final d = _latLngDistance(_displayPosition!, _routePoints[i]);
-      if (d < minDist) {
-        minDist = d;
-        nearestIdx = i;
-      }
-    }
-    // Eng yaqin nuqta + keyingi nuqta orasidagi burchakni hisoblaymiz
-    final nextIdx = (nearestIdx + 1).clamp(0, _routePoints.length - 1);
-    if (nearestIdx == nextIdx) return _rawHeading;
-    return _bearingBetween(_routePoints[nearestIdx], _routePoints[nextIdx]);
-  }
-
-  /// Ikki nuqta orasidagi geodezik bearing (0-360)
-  double _bearingBetween(LatLng a, LatLng b) {
-    final dLon = (b.longitude - a.longitude) * math.pi / 180;
-    final lat1 = a.latitude * math.pi / 180;
-    final lat2 = b.latitude * math.pi / 180;
-    final y = math.sin(dLon) * math.cos(lat2);
-    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
-  }
-
-  /// Oddiy evklid masofasi (faqat qiyoslash uchun)
-  double _latLngDistance(LatLng a, LatLng b) {
-    final dx = a.latitude - b.latitude;
-    final dy = a.longitude - b.longitude;
-    return dx * dx + dy * dy;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  NAVIGATION HELPERS
-  // ═══════════════════════════════════════════════════════════════
-
-  String _translateManeuver(String type, String modifier) {
-    if (type == 'turn') {
-      if (modifier.contains('left')) return 'Chapga buriling';
-      if (modifier.contains('right')) return 'O\'ngga buriling';
-      if (modifier == 'uturn') return 'Orqaga qayting';
-    } else if (type == 'new name' || type == 'continue') {
-      return 'To\'g\'riga davom eting';
-    } else if (type == 'merge') {
-      return 'Qo\'shiling';
-    } else if (type == 'roundabout') {
-      return 'Aylanmadan harakatlaning';
-    } else if (type == 'arrive') {
-      return 'Manzilga yetib keldingiz';
-    } else if (type == 'depart') {
-      return 'Harakatni boshlang';
-    } else if (type == 'fork') {
-      if (modifier.contains('left')) return 'Chapga ajraling';
-      if (modifier.contains('right')) return 'O\'ngga ajraling';
-    } else if (type == 'end of road') {
-      if (modifier.contains('left')) return 'Chapga buriling';
-      if (modifier.contains('right')) return 'O\'ngga buriling';
-    }
-    return 'To\'g\'riga davom eting';
-  }
-
-  IconData _getStepIcon(String type, String modifier) {
-    if (type == 'arrive') return Icons.flag_rounded;
-    if (type == 'depart') return Icons.play_arrow_rounded;
-    if (modifier.contains('slight left')) return Icons.turn_slight_left;
-    if (modifier.contains('slight right')) return Icons.turn_slight_right;
-    if (modifier.contains('sharp left')) return Icons.turn_sharp_left;
-    if (modifier.contains('sharp right')) return Icons.turn_sharp_right;
-    if (modifier.contains('left')) return Icons.turn_left;
-    if (modifier.contains('right')) return Icons.turn_right;
-    if (modifier == 'uturn') return Icons.u_turn_left;
-    if (type == 'roundabout') return Icons.roundabout_right;
-    if (type == 'fork') return Icons.call_split;
-    if (type == 'merge') return Icons.call_merge;
-    return Icons.arrow_upward_rounded;
-  }
-
-  String _formatDistance(num meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.round()} m';
-  }
-
-
-
-  void _startNavigation() {
-    // Marshrutdan boshlang'ich yo'nalishni hisoblaymiz
-    final routeHeading = _calcRouteHeading();
-    _rawHeading = routeHeading;
-    _displayHeading = routeHeading;
-
-    setState(() {
-      _isNavigationStarted = true;
-      _followUser = true;
-    });
-    if (_displayPosition != null && _isMapReady) {
-      _mapController.move(_displayPosition!, 18.0);
-      _mapController.rotate(-routeHeading);
-      _displayMapRotation = -routeHeading;
-    }
-  }
-
-  void _stopNavigation() {
-    setState(() {
-      _isNavigationStarted = false;
-      _followUser = true;
-      _displayMapRotation = 0;
-    });
-    if (_isMapReady) {
-      _mapController.rotate(0);
-      if (_routePoints.isNotEmpty) _centerOnRoute();
-    }
-  }
-
-  void _focusOnUser() {
-    setState(() => _followUser = true);
-    if (_displayPosition != null && _isMapReady) {
-      _mapController.move(_displayPosition!, 18.0);
-      if (_isNavigationStarted) {
-        _mapController.rotate(-_rawHeading);
-        _displayMapRotation = -_rawHeading;
-      }
-    }
-  }
-
-  void _showExternalMaps() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tashqi ilovada ochish',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.location_on, color: AppColors.danger),
-              title: const Text('Google Karta'),
-              onTap: () async {
-                Navigator.pop(context);
-                final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${widget.destination.latitude},${widget.destination.longitude}&travelmode=driving');
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.navigation, color: Colors.amber),
-              title: const Text('Yandex Navigator'),
-              onTap: () async {
-                Navigator.pop(context);
-                final yandexUrlStr = 'yandexnavi://build_route_on_map?lat_to=${widget.destination.latitude}&lon_to=${widget.destination.longitude}';
-                final url = Uri.parse(yandexUrlStr);
-                
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                } else {
-                  final fallbackUrl = Uri.parse('https://yandex.com/maps/?rtext=~${widget.destination.latitude},${widget.destination.longitude}');
-                  if (await canLaunchUrl(fallbackUrl)) {
-                     await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
-  }
+  // Calculation methods moved to NavigationHelpersMixin
 
   @override
   void dispose() {
     _positionStream?.cancel();
     _routeRefreshTimer?.cancel();
-    _moveAnimController?.dispose();
-    _headingAnimController?.dispose();
+    disposeAnimations();
     _mapController.dispose();
     super.dispose();
   }
+
 
   // ═══════════════════════════════════════════════════════════════
   //  BUILD
@@ -535,14 +268,14 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
     final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      appBar: _isNavigationStarted
+      appBar: isNavigationStarted
           ? null
           : AppBar(
               title: Text(widget.addressTitle),
               backgroundColor: AppColors.surface,
               elevation: 0,
             ),
-      body: (_isLoading || (_isRouteLoading && _routePoints.isEmpty))
+      body: (_isLoading || (isRouteLoading && routePoints.isEmpty))
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -550,7 +283,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                   const CircularProgressIndicator(color: AppColors.primary),
                   const SizedBox(height: 16),
                   Text(
-                    _isLoading ? 'GPS qidirilmoqda...' : 'Marshrut hisoblanmoqda...',
+                    _isLoading
+                        ? 'GPS qidirilmoqda...'
+                        : 'Marshrut hisoblanmoqda...',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w500,
@@ -565,18 +300,18 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _displayPosition ?? widget.destination,
+                    initialCenter: displayPosition ?? widget.destination,
                     initialZoom: 17.0,
                     onMapReady: () {
                       _isMapReady = true;
-                      if (_routePoints.isNotEmpty && !_isNavigationStarted) {
-                        _centerOnRoute();
+                      if (routePoints.isNotEmpty && !isNavigationStarted) {
+                        centerOnRoute(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination);
                       }
                     },
                     onPositionChanged: (pos, hasGesture) {
-                      if (hasGesture && _followUser) {
-                        if (!_isNavigationStarted) {
-                          setState(() => _followUser = false);
+                      if (hasGesture && followUser) {
+                        if (!isNavigationStarted) {
+                          setState(() => followUser = false);
                         }
                       }
                     },
@@ -589,27 +324,31 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     ),
 
                     // Route polylines
-                    if (_routePoints.isNotEmpty)
+                    if (routePoints.isNotEmpty)
                       PolylineLayer(
                         polylines: [
-                          ..._alternativeRoutes.map((alt) => Polyline(
-                                points: alt,
-                                color: Colors.grey.withValues(alpha: 0.35),
-                                strokeWidth: 5.0,
-                                strokeJoin: StrokeJoin.round,
-                                strokeCap: StrokeCap.round,
-                              )),
+                          ...alternativeRoutes.map(
+                            (alt) => Polyline(
+                              points: alt,
+                              color: Colors.grey.withValues(alpha: 0.35),
+                              strokeWidth: 5.0,
+                              strokeJoin: StrokeJoin.round,
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
                           // Soya (outline)
                           Polyline(
-                            points: _routePoints,
-                            color: const Color(0xFF1A237E).withValues(alpha: 0.4),
+                            points: routePoints,
+                            color: const Color(
+                              0xFF1A237E,
+                            ).withValues(alpha: 0.4),
                             strokeWidth: 12.0,
                             strokeJoin: StrokeJoin.round,
                             strokeCap: StrokeCap.round,
                           ),
                           // Asosiy marshrut (Google-uslub — quyuq ko'k)
                           Polyline(
-                            points: _routePoints,
+                            points: routePoints,
                             color: const Color(0xFF1565C0),
                             strokeWidth: 7.0,
                             strokeJoin: StrokeJoin.round,
@@ -617,11 +356,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                           ),
                         ],
                       )
-                    else if (_displayPosition != null && _isRouteLoading)
+                    else if (displayPosition != null && isRouteLoading)
                       PolylineLayer(
                         polylines: [
                           Polyline(
-                            points: [_displayPosition!, widget.destination],
+                            points: [displayPosition!, widget.destination],
                             color: Colors.grey,
                             strokeWidth: 3.0,
                             pattern: StrokePattern.dashed(segments: [10, 10]),
@@ -629,90 +368,108 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                         ],
                       ),
 
-                      // Markers
-                      MarkerLayer(
-                        markers: [
-                          // Punktlar (Branches)
-                          ..._branches.map((b) => Marker(
-                                point: b,
-                                width: 32,
-                                height: 32,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade700,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                  child: const Icon(Icons.local_hospital, color: Colors.white, size: 18),
-                                ),
-                              )),
-
-                          // 🚙 User (Driver) Marker — ko'k dumaloq va yo'nalish belgisi
-                          if (_displayPosition != null)
-                            Marker(
-                              point: _displayPosition!,
-                              width: 32,
-                              height: 32,
-                              alignment: Alignment.center,
-                              rotate: false, // Ekran yuzasiga qulf, harita aylansa ham u "Tepani" (UP) ko'rsataveradi!
-                              child: Transform.rotate(
-                                // Agar navigatsiya boshlangan bo'lsa (Xarita aylanadi), marker har doim tepani ko'rsatishi u-n 0 gradus kerak.
-                                // Chunki xarita uning ostida aylanadi.
-                                angle: _isNavigationStarted
-                                    ? 0
-                                    : (_displayHeading * math.pi / 180),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade600,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 3),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Yo'nalishni bildiruvchi kichik pointer (tepaga qarab turadi)
-                                    const Positioned(
-                                      top: 2,
-                                      child: Icon(Icons.keyboard_arrow_up, color: Colors.white, size: 18),
-                                    ),
-                                  ],
+                    // Markers
+                    MarkerLayer(
+                      markers: [
+                        // Punktlar (Branches)
+                        ..._branches.map(
+                          (b) => Marker(
+                            point: b,
+                            width: 32,
+                            height: 32,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade700,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
                                 ),
                               ),
-                            ),
-
-                          // Manzil
-                          Marker(
-                            point: widget.destination,
-                            width: 50,
-                            height: 50,
-                            alignment: Alignment.topCenter,
-                            child: const Icon(
-                              Icons.location_on,
-                              color: AppColors.danger,
-                              size: 45,
+                              child: const Icon(
+                                Icons.local_hospital,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+
+                        // 🚙 User (Driver) Marker — ko'k dumaloq va yo'nalish belgisi
+                        if (displayPosition != null)
+                          Marker(
+                            point: displayPosition!,
+                            width: 32,
+                            height: 32,
+                            alignment: Alignment.center,
+                            rotate:
+                                false, // Ekran yuzasiga qulf, harita aylansa ham u "Tepani" (UP) ko'rsataveradi!
+                            child: Transform.rotate(
+                              // Agar navigatsiya boshlangan bo'lsa (Xarita aylanadi), marker har doim tepani ko'rsatishi u-n 0 gradus kerak.
+                              // Chunki xarita uning ostida aylanadi.
+                              angle: isNavigationStarted
+                                  ? 0
+                                  : (displayHeading * math.pi / 180),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade600,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 3,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Yo'nalishni bildiruvchi kichik pointer (tepaga qarab turadi)
+                                  const Positioned(
+                                    top: 2,
+                                    child: Icon(
+                                      Icons.keyboard_arrow_up,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        // Manzil
+                        Marker(
+                          point: widget.destination,
+                          width: 50,
+                          height: 50,
+                          alignment: Alignment.topCenter,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.danger,
+                            size: 45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
 
                 // ═══════════════════════════════════════════════════
                 //  NAVIGATSIYA UI (Google Maps uslubida)
                 // ═══════════════════════════════════════════════════
-
-                if (_isNavigationStarted && _turnSteps.isNotEmpty) ...[
-                  if (_turnSteps.length > 1) 
+                if (isNavigationStarted && turnSteps.isNotEmpty) ...[
+                  if (turnSteps.length > 1)
                     // ─── YUQORI PANEL: "500 m dan keyin ↰" ─────────────
                     Positioned(
                       top: 0,
@@ -730,7 +487,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              '${_formatDistance(_turnSteps[0]['distance'] ?? 0)} dan keyin',
+                              '${formatDistance(turnSteps[0]['distance'] ?? 0)} dan keyin',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -739,9 +496,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                             ),
                             const SizedBox(width: 16),
                             Icon(
-                              _getStepIcon(
-                                _turnSteps[1]['maneuver']['type'] ?? '',
-                                _turnSteps[1]['maneuver']['modifier'] ?? '',
+                              getStepIcon(
+                                turnSteps[1]['maneuver']['type'] ?? '',
+                                turnSteps[1]['maneuver']['modifier'] ?? '',
                               ),
                               color: Colors.white,
                               size: 36,
@@ -766,9 +523,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                         ),
                         child: Center(
                           child: Text(
-                            _translateManeuver(
-                              _turnSteps[0]['maneuver']['type'] ?? '',
-                              _turnSteps[0]['maneuver']['modifier'] ?? '',
+                            translateManeuver(
+                              turnSteps[0]['maneuver']['type'] ?? '',
+                              turnSteps[0]['maneuver']['modifier'] ?? '',
                             ),
                             style: const TextStyle(
                               color: Colors.white,
@@ -781,12 +538,15 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     ),
 
                   // ─── "Keyin" ko'rsatkich ───────────────────────
-                  if (_turnSteps.length > 1)
+                  if (turnSteps.length > 1)
                     Positioned(
                       top: topPad + 86,
                       left: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: const BoxDecoration(
                           color: Color(0xFF145A3A),
                           borderRadius: BorderRadius.only(
@@ -810,9 +570,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                 ),
                                 const SizedBox(width: 6),
                                 Icon(
-                                  _getStepIcon(
-                                    _turnSteps[1]['maneuver']['type'] ?? '',
-                                    _turnSteps[1]['maneuver']['modifier'] ?? '',
+                                  getStepIcon(
+                                    turnSteps[1]['maneuver']['type'] ?? '',
+                                    turnSteps[1]['maneuver']['modifier'] ?? '',
                                   ),
                                   color: Colors.white,
                                   size: 22,
@@ -820,7 +580,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                               ],
                             ),
                             Text(
-                              _formatDistance(_turnSteps[0]['distance'] ?? 0),
+                              formatDistance(turnSteps[0]['distance'] ?? 0),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -835,14 +595,20 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                   // ─── Bemor haqida ma'lumot (Patient info) ───────────
                   if (widget.targetResident != null || widget.household != null)
                     Positioned(
-                      top: topPad + ( _turnSteps.length > 1 ? 144 : 86 ),
+                      top: topPad + (turnSteps.length > 1 ? 144 : 86),
                       left: 12,
                       child: GestureDetector(
-                        onTap: () => setState(() => _isPatientInfoExpanded = !_isPatientInfoExpanded),
+                        onTap: () => setState(
+                          () =>
+                              _isPatientInfoExpanded = !_isPatientInfoExpanded,
+                        ),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: _isPatientInfoExpanded ? 220 : 60,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(20),
@@ -851,7 +617,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                 color: Colors.black.withValues(alpha: 0.15),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
-                              )
+                              ),
                             ],
                           ),
                           child: _isPatientInfoExpanded
@@ -861,14 +627,20 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                     Row(
                                       children: [
                                         Icon(
-                                          widget.targetResident?.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
+                                          widget.targetResident?.gender ==
+                                                  'FEMALE'
+                                              ? Icons.person_outline
+                                              : Icons.person,
                                           color: AppColors.primary,
                                           size: 20,
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            widget.targetResident?.displayFullName ?? 'Bemor',
+                                            widget
+                                                    .targetResident
+                                                    ?.displayFullName ??
+                                                'Bemor',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
@@ -879,9 +651,16 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                           ),
                                         ),
                                         GestureDetector(
-                                          onTap: () => setState(() => _isPatientInfoExpanded = false),
-                                          child: const Icon(Icons.close, size: 18, color: Colors.grey),
-                                        )
+                                          onTap: () => setState(
+                                            () =>
+                                                _isPatientInfoExpanded = false,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            size: 18,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
@@ -904,10 +683,17 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                         style: OutlinedButton.styleFrom(
                                           padding: EdgeInsets.zero,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
-                                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                                          backgroundColor: AppColors.primary.withValues(alpha: 0.05),
+                                          side: BorderSide(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.5,
+                                            ),
+                                          ),
+                                          backgroundColor: AppColors.primary
+                                              .withValues(alpha: 0.05),
                                         ),
                                         child: const Text(
                                           "Oila a'zolarini ko'rish",
@@ -925,12 +711,20 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      widget.targetResident?.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
+                                      widget.targetResident?.gender == 'FEMALE'
+                                          ? Icons.person_outline
+                                          : Icons.person,
                                       color: AppColors.primary,
                                       size: 24,
                                     ),
                                     const SizedBox(height: 2),
-                                    const Text('Bemor', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    const Text(
+                                      'Bemor',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ],
                                 ),
                         ),
@@ -939,7 +733,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                 ],
 
                 // ─── Meni ko'rsat (fokus) tooltip ───────────────
-                if (_isNavigationStarted && !_followUser)
+                if (isNavigationStarted && !followUser)
                   Positioned(
                     bottom: 100,
                     left: 16,
@@ -949,13 +743,20 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                       color: Colors.white,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(24),
-                        onTap: _focusOnUser,
+                        onTap: () => focusOnUser(mapController: _mapController, isMapReady: _isMapReady, rawHeading: _rawHeading),
                         child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.warning_amber_rounded, color: Color(0xFF1B8D5B), size: 18),
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Color(0xFF1B8D5B),
+                                size: 18,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 'Meni ko\'rsat',
@@ -974,12 +775,14 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
 
                 // ─── O'NG TOMON TUGMALAR ─────────────────────────
                 Positioned(
-                  bottom: _isNavigationStarted ? 90 : (_distance.isNotEmpty ? 155 : 80),
+                  bottom: isNavigationStarted
+                      ? 90
+                      : (distance.isNotEmpty ? 155 : 80),
                   right: 12,
                   child: Column(
                     children: [
                       // Tezlik o'lchagich (Speedometer)
-                      if (_isNavigationStarted)
+                      if (isNavigationStarted)
                         Container(
                           width: 46,
                           height: 46,
@@ -989,7 +792,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.red, width: 2),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 3)),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
                             ],
                           ),
                           child: Center(
@@ -998,29 +805,45 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                               children: [
                                 Text(
                                   (_currentSpeed * 3.6).round().toString(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.0, color: Colors.black87),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    height: 1.0,
+                                    color: Colors.black87,
+                                  ),
                                 ),
-                                const Text('km/h', style: TextStyle(fontSize: 9, height: 1.0, color: Colors.black54)),
+                                const Text(
+                                  'km/h',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    height: 1.0,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ),
 
                       // Kompas
-                      if (_isNavigationStarted)
+                      if (isNavigationStarted)
                         _buildControlButton(
                           heroTag: 'compass_btn',
                           icon: Transform.rotate(
-                            angle: _displayMapRotation * math.pi / 180,
-                            child: const Icon(Icons.navigation, color: Colors.red, size: 22),
+                            angle: displayMapRotation * math.pi / 180,
+                            child: const Icon(
+                              Icons.navigation,
+                              color: Colors.red,
+                              size: 22,
+                            ),
                           ),
                           onTap: () {
                             // Shimolga qarab qo'yish
                             _mapController.rotate(0);
-                            setState(() => _displayMapRotation = 0);
+                            setState(() => displayMapRotation = 0);
                           },
                         ),
-                      if (_isNavigationStarted) const SizedBox(height: 10),
+                      if (isNavigationStarted) const SizedBox(height: 10),
 
                       // Qatlam
                       _buildControlButton(
@@ -1028,7 +851,9 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                         icon: Icon(
                           _mapLayer == 'm'
                               ? Icons.layers
-                              : (_mapLayer == 'y' ? Icons.layers_outlined : Icons.satellite_alt),
+                              : (_mapLayer == 'y'
+                                    ? Icons.layers_outlined
+                                    : Icons.satellite_alt),
                           color: Colors.black87,
                           size: 22,
                         ),
@@ -1051,18 +876,24 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                         heroTag: 'focus_user',
                         icon: Icon(
                           Icons.my_location,
-                          color: _followUser ? AppColors.primary : Colors.black54,
+                          color: followUser
+                              ? AppColors.primary
+                              : Colors.black54,
                           size: 22,
                         ),
-                        onTap: _focusOnUser,
+                        onTap: () => focusOnUser(mapController: _mapController, isMapReady: _isMapReady, rawHeading: _rawHeading),
                       ),
 
-                      if (_isNavigationStarted) ...[
+                      if (isNavigationStarted) ...[
                         const SizedBox(height: 10),
                         // Ovoz (placeholder)
                         _buildControlButton(
                           heroTag: 'sound_btn',
-                          icon: const Icon(Icons.volume_up, color: Colors.black87, size: 22),
+                          icon: const Icon(
+                            Icons.volume_up,
+                            color: Colors.black87,
+                            size: 22,
+                          ),
                           onTap: () {},
                         ),
                       ],
@@ -1075,7 +906,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: _isNavigationStarted
+                  child: isNavigationStarted
                       ? _buildNavigationBottomBar()
                       : _buildRoutePreviewSheet(),
                 ),
@@ -1100,11 +931,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(child: icon),
-        ),
+        child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
       ),
     );
   }
@@ -1114,7 +941,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildNavigationBottomBar() {
-    final etaMinutes = int.tryParse(_duration) ?? 0;
+    final etaMinutes = int.tryParse(duration) ?? 0;
     final eta = DateTime.now().add(Duration(minutes: etaMinutes));
     final etaString = '${eta.hour}:${eta.minute.toString().padLeft(2, '0')}';
 
@@ -1137,7 +964,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
             children: [
               // ✕ Tugmasi
               GestureDetector(
-                onTap: _stopNavigation,
+                onTap: () => stopNavigation(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination),
                 child: Container(
                   width: 44,
                   height: 44,
@@ -1145,7 +972,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.shade300, width: 1.5),
                   ),
-                  child: const Icon(Icons.close, color: Colors.black54, size: 22),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -1162,7 +993,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          _duration,
+                          duration,
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -1189,7 +1020,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                       ],
                     ),
                     Text(
-                      '$_distance km  •  $etaString',
+                      '$distance km  •  $etaString',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -1203,7 +1034,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
 
               // Tashqi kartalar
               GestureDetector(
-                onTap: _showExternalMaps,
+                onTap: () => showExternalMaps(context, widget.destination),
                 child: Container(
                   width: 44,
                   height: 44,
@@ -1211,7 +1042,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.shade300, width: 1.5),
                   ),
-                  child: const Icon(Icons.map_outlined, color: Colors.black54, size: 22),
+                  child: const Icon(
+                    Icons.map_outlined,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1219,8 +1054,8 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
               // Marshrut ko'rinishi
               GestureDetector(
                 onTap: () {
-                  setState(() => _followUser = false);
-                  _centerOnRoute();
+                  setState(() => followUser = false);
+                  centerOnRoute(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination);
                   _mapController.rotate(0);
                 },
                 child: Container(
@@ -1230,7 +1065,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.shade300, width: 1.5),
                   ),
-                  child: const Icon(Icons.alt_route, color: Colors.black54, size: 22),
+                  child: const Icon(
+                    Icons.alt_route,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
                 ),
               ),
             ],
@@ -1274,17 +1113,21 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              if (_distance.isNotEmpty && _duration.isNotEmpty) ...[
+              if (distance.isNotEmpty && duration.isNotEmpty) ...[
                 // Sarlavha + masofa bir qatorda
                 Row(
                   children: [
                     const Text(
                       'Tez Yordam',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Spacer(),
                     Text(
-                      '$_duration daq.',
+                      '$duration daq.',
                       style: const TextStyle(
                         color: Color(0xFF81C784),
                         fontSize: 20,
@@ -1292,8 +1135,11 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                       ),
                     ),
                     Text(
-                      ' ($_distance km)',
-                      style: const TextStyle(color: Colors.white54, fontSize: 14),
+                      ' ($distance km)',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -1307,29 +1153,38 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                 ),
                 const SizedBox(height: 14),
                 // Tugmalar
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _startNavigation,
-                        icon: const Icon(Icons.navigation, color: Colors.black87, size: 22),
-                        label: const Text(
-                          'Boshlash',
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF80DEEA),
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () => startNavigation(
+                      mapController: _mapController,
+                      isMapReady: _isMapReady,
+                      rawHeading: _rawHeading,
+                      onHeadingUpdate: (h) => setState(() => _rawHeading = h),
+                    ),
+                    icon: const Icon(
+                      Icons.navigation,
+                      color: Colors.black87,
+                      size: 22,
+                    ),
+                    label: const Text(
+                      'Boshlash',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF80DEEA),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -1340,7 +1195,7 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
 
   void _showFamilyMembers() {
     if (widget.household == null) return;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1357,8 +1212,12 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
           children: [
             Center(
               child: Container(
-                 width: 40, height: 5,
-                 decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -1366,18 +1225,29 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
               children: [
                 const Text(
                   'Oila a\'zolari',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMain,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${widget.household!.residents.length}',
-                    style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -1393,26 +1263,43 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
                       radius: 20,
-                          backgroundColor: AppColors.background,
+                      backgroundColor: AppColors.background,
                       child: Icon(
-                        res.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
+                        res.gender == 'FEMALE'
+                            ? Icons.person_outline
+                            : Icons.person,
                         color: AppColors.textSecondary,
                         size: 20,
                       ),
                     ),
                     title: Text(
                       res.displayFullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     subtitle: Row(
                       children: [
                         if (res.role != null) ...[
-                          Text(res.role!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          const Text('  •  ', style: TextStyle(color: AppColors.textSecondary)),
+                          Text(
+                            res.role!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const Text(
+                            '  •  ',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
                         ],
                         Text(
                           res.phonePrimary ?? 'Telefon yo\'q',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -1427,4 +1314,3 @@ class _DriverMapPageState extends State<DriverMapPage> with TickerProviderStateM
     );
   }
 }
-
