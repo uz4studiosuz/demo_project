@@ -29,16 +29,11 @@ class MapTopInfoPill extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.90),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.6),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
             ),
             child: Row(
               children: [
@@ -94,7 +89,7 @@ class MapTopInfoPill extends StatelessWidget {
                           ],
                         )
                       : Text(
-                          'Xaritada $householdsCount ta xonadon',
+                          'Jami: $householdsCount ta xonadon',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textMain,
@@ -115,10 +110,10 @@ class MapTopInfoPill extends StatelessWidget {
                     currentZoom < 11
                         ? 'Tumanlar'
                         : currentZoom < 12.5
-                            ? 'MFYlar'
-                            : currentZoom < 15
-                                ? 'Ko\'chalar'
-                                : 'Xonadonlar',
+                        ? 'MFYlar'
+                        : currentZoom < 15
+                        ? 'Ko\'chalar'
+                        : 'Xonadonlar',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.govNavy,

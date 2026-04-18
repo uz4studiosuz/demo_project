@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../models/household_model.dart';
-import '../../../models/resident_model.dart';
-import '../../../theme/colors.dart';
+import '../../models/household_model.dart';
+import '../../models/resident_model.dart';
+import '../../models/resident_model.dart';
+import '../../services/supabase_service.dart';
+import '../../theme/colors.dart';
 
 const int kMinSearchLength = 2;
 const int kMaxSearchResults = 60;
@@ -13,7 +15,7 @@ class SearchResult {
   SearchResult({required this.household, this.resident});
 }
 
-class SurveyorSearchViewModel extends ChangeNotifier {
+class GlobalSearchViewModel extends ChangeNotifier {
   List<HouseholdModel> _households = [];
   Timer? _debounce;
   
@@ -31,6 +33,9 @@ class SurveyorSearchViewModel extends ChangeNotifier {
 
   String? _filterType; // 'house' | 'apartment' | null
   String? get filterType => _filterType;
+
+  String? _filterGender; // Added for driver compatibility if needed
+  String? get filterGender => _filterGender;
 
   bool _showFilters = false;
   bool get showFilters => _showFilters;
@@ -88,24 +93,29 @@ class SurveyorSearchViewModel extends ChangeNotifier {
     _debounce = Timer(const Duration(milliseconds: 300), () => _runSearch(trimmed));
   }
 
-  void _runSearch(String query) {
+  void _runSearch(String query) async {
     final lower = query.toLowerCase();
+    
+    // 1. Local search first (for fast results from already loaded data)
     final out = <SearchResult>[];
 
     for (final h in _households) {
       if (out.length >= kMaxSearchResults) break;
       if (_filterDistrict != null && h.tumanName != _filterDistrict) continue;
       if (_filterMfy != null && h.mfyName != _filterMfy) continue;
-      if (_filterType == 'house' && h.propertyType != kHouse) continue;
-      if (_filterType == 'apartment' && h.propertyType != kApartment) continue;
+      if (_filterType == 'house' && h.propertyType != 'house') continue;
+      if (_filterType == 'apartment' && h.propertyType != 'apartment') continue;
 
       if (lower.isEmpty) {
         // Only filtered
         for (final r in h.residents) {
           if (out.length >= kMaxSearchResults) break;
+          if (_filterGender != null && r.gender != _filterGender) continue;
           out.add(SearchResult(household: h, resident: r));
         }
-        if (h.residents.isEmpty) out.add(SearchResult(household: h));
+        if (h.residents.isEmpty && _filterGender == null) {
+          out.add(SearchResult(household: h));
+        }
         continue;
       }
 
@@ -120,17 +130,48 @@ class SurveyorSearchViewModel extends ChangeNotifier {
       bool anyResidentAdded = false;
       for (final r in h.residents) {
         if (out.length >= kMaxSearchResults) break;
+        if (_filterGender != null && r.gender != _filterGender) continue;
+
         final resMatch =
             r.displayFullName.toLowerCase().contains(lower) ||
             (r.phonePrimary ?? '').contains(lower);
+        
         if (resMatch || addrMatch) {
           out.add(SearchResult(household: h, resident: r));
           anyResidentAdded = true;
         }
       }
       
-      if (!anyResidentAdded && addrMatch) {
+      if (!anyResidentAdded && addrMatch && _filterGender == null) {
         out.add(SearchResult(household: h));
+      }
+    }
+
+    // 2. REMOTE SEARCH (Millionlab aholi bo'lganda shu qism ishlaydi)
+    // Agar local natijalar kam bo'lsa yoki query uzun bo'lsa serverga so'rov yuboramiz
+    if (query.length >= 3 && out.length < 5) {
+      _isSearching = true;
+      notifyListeners();
+
+      final remoteResults = await SupabaseService.searchHouseholdsRemote(query);
+      
+      for (final h in remoteResults) {
+        // Dublikat bo'lsa qo'shmaslik
+        if (out.any((e) => e.household.id == h.id)) continue;
+        if (out.length >= kMaxSearchResults) break;
+
+        // Remote filtrlarni qo'llash
+        if (_filterDistrict != null && h.tumanName != _filterDistrict) continue;
+        if (_filterMfy != null && h.mfyName != _filterMfy) continue;
+
+        if (h.residents.isEmpty) {
+          out.add(SearchResult(household: h));
+        } else {
+          for (final r in h.residents) {
+             if (_filterGender != null && r.gender != _filterGender) continue;
+             out.add(SearchResult(household: h, resident: r));
+          }
+        }
       }
     }
 
@@ -158,7 +199,7 @@ class SurveyorSearchViewModel extends ChangeNotifier {
     return s.toList()..sort();
   }
 
-  bool get hasFilter => _filterDistrict != null || _filterMfy != null || _filterType != null;
+  bool get hasFilter => _filterDistrict != null || _filterMfy != null || _filterType != null || _filterGender != null;
   bool get isIdle => _rawQuery.trim().length < kMinSearchLength && !hasFilter;
 
   int get totalHouseholds => _households.length;
@@ -167,7 +208,6 @@ class SurveyorSearchViewModel extends ChangeNotifier {
   void setFilterDistrict(String? district) {
     _filterDistrict = district == _filterDistrict ? null : district;
     _filterMfy = null;
-    if (!hasFilter && _showFilters) _showFilters = false;
     onChanged(_rawQuery);
   }
 
@@ -181,10 +221,16 @@ class SurveyorSearchViewModel extends ChangeNotifier {
     onChanged(_rawQuery);
   }
 
+  void setFilterGender(String? gender) {
+    _filterGender = _filterGender == gender ? null : gender;
+    onChanged(_rawQuery);
+  }
+
   void clearFilters() {
     _filterDistrict = null;
     _filterMfy = null;
     _filterType = null;
+    _filterGender = null;
     onChanged(_rawQuery);
   }
 }

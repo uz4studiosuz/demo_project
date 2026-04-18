@@ -6,7 +6,6 @@ import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import '../widgets/surveyor_household_actions.dart';
 import '../add_family_page.dart';
-import '../surveyor_search/surveyor_search_page.dart';
 import 'patient_list_view_model.dart';
 import 'widgets/patient_list_widgets.dart';
 import '../../../models/household_model.dart';
@@ -19,7 +18,8 @@ class PatientListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProxyProvider<AppProvider, PatientListViewModel>(
       create: (ctx) => PatientListViewModel()..load(ctx),
-      update: (ctx, provider, viewModel) => viewModel!..syncHouseholds(provider.households),
+      update: (ctx, provider, viewModel) =>
+          viewModel!..syncHouseholds(provider.households),
       child: _PatientListView(isEmbedded: isEmbedded),
     );
   }
@@ -60,13 +60,17 @@ class _PatientListView extends StatelessWidget {
           child: CustomScrollView(
             slivers: [
               _buildAppBar(viewModel),
-              SliverToBoxAdapter(child: _buildSearchTrigger(context, viewModel)),
+              SliverToBoxAdapter(
+                child: _buildSearchTrigger(context, viewModel),
+              ),
               SliverToBoxAdapter(
                 child: isLoading
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 40),
                         child: Center(
-                          child: CircularProgressIndicator(color: AppColors.govNavy),
+                          child: CircularProgressIndicator(
+                            color: AppColors.govNavy,
+                          ),
                         ),
                       )
                     : _buildDrillContent(context, viewModel),
@@ -82,7 +86,10 @@ class _PatientListView extends StatelessWidget {
                 icon: const Icon(Icons.add, color: Colors.white),
                 label: const Text(
                   'Yangi xatlov',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
       ),
@@ -95,12 +102,18 @@ class _PatientListView extends StatelessWidget {
   }
 
   // ─── SEARCH TRIGGER ──────────────────────────────────────────────────────
-  Widget _buildSearchTrigger(BuildContext context, PatientListViewModel viewModel) {
+  Widget _buildSearchTrigger(
+    BuildContext context,
+    PatientListViewModel viewModel,
+  ) {
     return PatientListSearchTrigger(viewModel: viewModel);
   }
 
   // ─── DRILL CONTENT ───────────────────────────────────────────────────────
-  Widget _buildDrillContent(BuildContext context, PatientListViewModel viewModel) {
+  Widget _buildDrillContent(
+    BuildContext context,
+    PatientListViewModel viewModel,
+  ) {
     return PatientListDrillContent(
       viewModel: viewModel,
       onOpenDetails: _openDetails,
@@ -109,13 +122,17 @@ class _PatientListView extends StatelessWidget {
   }
 
   // ─── BUILDING BOTTOM SHEET ────────────────────────────────────────
-  void _showBuildingSheet(BuildContext context, List<HouseholdModel> apartments) {
+  void _showBuildingSheet(
+    BuildContext context,
+    List<HouseholdModel> apartments,
+  ) {
     final floorsMap = <int, List<HouseholdModel>>{};
     for (final apt in apartments) {
       final f = apt.floor ?? 0;
       floorsMap.putIfAbsent(f, () => []).add(apt);
     }
-    final sortedFloors = floorsMap.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedFloors = floorsMap.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
 
     showModalBottomSheet(
       context: context,
@@ -126,8 +143,15 @@ class _PatientListView extends StatelessWidget {
           color: Color(0xFFF8F9FA),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 20),
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          MediaQuery.of(context).padding.bottom + 20,
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,7 +160,10 @@ class _PatientListView extends StatelessWidget {
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -146,11 +173,23 @@ class _PatientListView extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFF37474F), Color(0xFF263238)]),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF37474F), Color(0xFF263238)],
+                    ),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.apartment, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.apartment,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -159,12 +198,19 @@ class _PatientListView extends StatelessWidget {
                     children: [
                       Text(
                         '${apartments.first.buildingNumber ?? "?"}–bino',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textMain,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Jami ${apartments.length} ta xonadon ro\'yxatdan o\'tgan',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -178,8 +224,10 @@ class _PatientListView extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (ctx, i) {
                   final f = sortedFloors[i];
-                  final apts = floorsMap[f]!..sort(
-                      (a, b) => (int.tryParse(a.apartment ?? '0') ?? 0).compareTo(int.tryParse(b.apartment ?? '0') ?? 0),
+                  final apts = floorsMap[f]!
+                    ..sort(
+                      (a, b) => (int.tryParse(a.apartment ?? '0') ?? 0)
+                          .compareTo(int.tryParse(b.apartment ?? '0') ?? 0),
                     );
 
                   return Column(
@@ -189,18 +237,23 @@ class _PatientListView extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 4, bottom: 8),
                         child: Text(
                           '$f–qavat',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textMain),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textMain,
+                          ),
                         ),
                       ),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.6,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.6,
+                            ),
                         itemCount: apts.length,
                         itemBuilder: (_, j) {
                           final h = apts[j];
@@ -214,7 +267,13 @@ class _PatientListView extends StatelessWidget {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.grey.shade200),
-                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2))],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Center(
                                 child: Column(
@@ -222,9 +281,20 @@ class _PatientListView extends StatelessWidget {
                                   children: [
                                     Text(
                                       '${h.apartment}',
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.govNavy),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.govNavy,
+                                      ),
                                     ),
-                                    const Text('kvartira', style: TextStyle(fontSize: 9, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                    const Text(
+                                      'kvartira',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),

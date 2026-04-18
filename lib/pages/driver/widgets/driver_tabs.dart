@@ -8,7 +8,7 @@ import '../../../models/resident_model.dart';
 import '../../login/login_page.dart';
 import 'nav_optionsheet.dart';
 import '../../../widgets/household_info_sheet.dart';
-import '../driver_search_page.dart';
+import '../../search/global_search_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  DRIVER HOME TAB — Drill-down qidiruv, stateful
@@ -266,10 +266,11 @@ class _DriverListsTabState extends State<DriverListsTab> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DriverSearchPage(
+            builder: (_) => GlobalSearchPage(
               households: _all,
-              onNavigate: (h, r) => _openNav(h, r: r),
-              onOpenDetail: _openDetails,
+              actionIcon: Icons.directions_car_rounded,
+              onActionTap: (h, r) => _openNav(h, r: r),
+              onResultTap: _openDetails,
             ),
           ),
         ),

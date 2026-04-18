@@ -6,7 +6,8 @@ import '../../../theme/colors.dart';
 import '../../../models/household_model.dart';
 import '../../login/login_page.dart';
 import '../../surveyor/households_map/households_map_page.dart';
-import '../driver_search_page.dart';
+import '../../surveyor/households_map/households_map_page.dart';
+import '../../search/global_search_page.dart';
 import 'nav_optionsheet.dart';
 import '../../../widgets/household_info_sheet.dart';
 
@@ -114,33 +115,34 @@ class DriverHomeTab extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DriverSearchPage(
+            builder: (_) => GlobalSearchPage(
               households: households,
-              onNavigate: (h, r) {
-                 showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => NavOptionsSheet(
-                      household: h,
-                      targetResident: r ?? (h.residents.isNotEmpty ? h.residents.first : null),
-                    ),
-                  );
+              actionIcon: Icons.directions_car_rounded,
+              onActionTap: (h, r) {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => NavOptionsSheet(
+                    household: h,
+                    targetResident: r ?? (h.residents.isNotEmpty ? h.residents.first : null),
+                  ),
+                );
               },
-              onOpenDetail: (h) {
-                 showHouseholdInfoSheet(
-                    context,
-                    h,
-                    onGetDirections: () {
-                       showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => NavOptionsSheet(
-                            household: h,
-                            targetResident: h.residents.isNotEmpty ? h.residents.first : null,
-                          ),
-                        );
-                    },
-                  );
+              onResultTap: (h) {
+                showHouseholdInfoSheet(
+                  context,
+                  h,
+                  onGetDirections: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => NavOptionsSheet(
+                        household: h,
+                        targetResident: h.residents.isNotEmpty ? h.residents.first : null,
+                      ),
+                    );
+                  },
+                );
               },
             ),
           ),

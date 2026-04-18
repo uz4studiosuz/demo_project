@@ -1,9 +1,12 @@
+import 'package:beemor/pages/surveyor/add_family_page.dart';
 import 'package:flutter/material.dart';
 import '../../../../models/household_model.dart';
 import '../../../../theme/colors.dart';
 import '../../../../widgets/household_info_sheet.dart';
+import '../../../../providers/app_provider.dart';
+import '../../../search/global_search_page.dart';
 import '../patient_list_view_model.dart';
-import '../../surveyor_search/surveyor_search_page.dart';
+import 'package:provider/provider.dart';
 
 class PatientListAppBar extends StatelessWidget {
   final PatientListViewModel viewModel;
@@ -40,13 +43,36 @@ class PatientListAppBar extends StatelessWidget {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _buildBreadcrumbItem('Hududlar', DrillLevel.district, viewModel.level == DrillLevel.district, viewModel),
-                    if (viewModel.level.index >= DrillLevel.mfy.index && viewModel.selDistrict != null)
-                      _buildBreadcrumbItem(viewModel.selDistrict!, DrillLevel.mfy, viewModel.level == DrillLevel.mfy, viewModel),
-                    if (viewModel.level.index >= DrillLevel.street.index && viewModel.selMfy != null)
-                      _buildBreadcrumbItem(viewModel.selMfy!, DrillLevel.street, viewModel.level == DrillLevel.street, viewModel),
-                    if (viewModel.level.index >= DrillLevel.household.index && viewModel.selStreet != null)
-                      _buildBreadcrumbItem(viewModel.selStreet!, DrillLevel.household, viewModel.level == DrillLevel.household, viewModel),
+                    _buildBreadcrumbItem(
+                      'Hududlar',
+                      DrillLevel.district,
+                      viewModel.level == DrillLevel.district,
+                      viewModel,
+                    ),
+                    if (viewModel.level.index >= DrillLevel.mfy.index &&
+                        viewModel.selDistrict != null)
+                      _buildBreadcrumbItem(
+                        viewModel.selDistrict!,
+                        DrillLevel.mfy,
+                        viewModel.level == DrillLevel.mfy,
+                        viewModel,
+                      ),
+                    if (viewModel.level.index >= DrillLevel.street.index &&
+                        viewModel.selMfy != null)
+                      _buildBreadcrumbItem(
+                        viewModel.selMfy!,
+                        DrillLevel.street,
+                        viewModel.level == DrillLevel.street,
+                        viewModel,
+                      ),
+                    if (viewModel.level.index >= DrillLevel.household.index &&
+                        viewModel.selStreet != null)
+                      _buildBreadcrumbItem(
+                        viewModel.selStreet!,
+                        DrillLevel.household,
+                        viewModel.level == DrillLevel.household,
+                        viewModel,
+                      ),
                   ],
                 ),
               ),
@@ -57,7 +83,12 @@ class PatientListAppBar extends StatelessWidget {
     );
   }
 
-  Widget _buildBreadcrumbItem(String label, DrillLevel lvl, bool isActive, PatientListViewModel viewModel) {
+  Widget _buildBreadcrumbItem(
+    String label,
+    DrillLevel lvl,
+    bool isActive,
+    PatientListViewModel viewModel,
+  ) {
     return GestureDetector(
       onTap: () => viewModel.setLevel(lvl),
       child: Row(
@@ -67,7 +98,9 @@ class PatientListAppBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.govNavy : AppColors.govNavy.withValues(alpha: 0.05),
+              color: isActive
+                  ? AppColors.govNavy
+                  : AppColors.govNavy.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -82,7 +115,11 @@ class PatientListAppBar extends StatelessWidget {
           if (lvl != DrillLevel.household && isActive == false)
             const Padding(
               padding: EdgeInsets.only(right: 8),
-              child: Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary),
+              child: Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
             ),
         ],
       ),
@@ -104,7 +141,26 @@ class PatientListSearchTrigger extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => SurveyorSearchPage(households: viewModel.allHouseholds),
+            builder: (_) => GlobalSearchPage(
+              households: viewModel.allHouseholds,
+              actionIcon: Icons.edit_outlined,
+              onActionTap: (h, r) async {
+                final provider = Provider.of<AppProvider>(
+                  context,
+                  listen: false,
+                );
+                final nav = Navigator.of(context);
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AddFamilyPage(existing: h)),
+                );
+                if (result == true) {
+                  provider.fetchHouseholds();
+                  nav.pop();
+                }
+              },
+              onResultTap: (h) => showHouseholdInfoSheet(context, h),
+            ),
           ),
         ),
         child: Container(
@@ -147,7 +203,7 @@ class PatientListDrillContent extends StatelessWidget {
   final void Function(BuildContext, List<HouseholdModel>) onShowBuildingSheet;
 
   const PatientListDrillContent({
-    super.key, 
+    super.key,
     required this.viewModel,
     required this.onOpenDetails,
     required this.onShowBuildingSheet,
@@ -285,7 +341,8 @@ class PatientListDrillContent extends StatelessWidget {
             childAspectRatio: 1.5,
           ),
           itemCount: items.length,
-          itemBuilder: (_, i) => _buildGridItem(items[i], icon, onTap, viewModel),
+          itemBuilder: (_, i) =>
+              _buildGridItem(items[i], icon, onTap, viewModel),
         ),
       ],
     );
@@ -346,7 +403,9 @@ class PatientListDrillContent extends StatelessWidget {
                   count > 0 ? '$count ta xonadon' : 'Ochish →',
                   style: TextStyle(
                     fontSize: 10,
-                    color: count > 0 ? AppColors.textSecondary : AppColors.govNavy,
+                    color: count > 0
+                        ? AppColors.textSecondary
+                        : AppColors.govNavy,
                     fontWeight: count > 0 ? FontWeight.normal : FontWeight.w600,
                   ),
                 ),
@@ -414,7 +473,10 @@ class PatientListDrillContent extends StatelessWidget {
     );
   }
 
-  Widget _buildHouseholdItem(HouseOrBuilding item, void Function(HouseOrBuilding) onTap) {
+  Widget _buildHouseholdItem(
+    HouseOrBuilding item,
+    void Function(HouseOrBuilding) onTap,
+  ) {
     return GestureDetector(
       onTap: () => onTap(item),
       child: Container(
@@ -463,8 +525,13 @@ class PatientListDrillContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  item.isBuilding ? '${item.apartments!.length} ta kvartira' : 'ID: ${item.house!.id}',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                  item.isBuilding
+                      ? '${item.apartments!.length} ta kvartira'
+                      : 'ID: ${item.house!.id}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),

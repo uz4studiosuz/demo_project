@@ -61,6 +61,30 @@ class SupabaseService {
     }
   }
 
+  /// Millionlab ma'lumotlar uchun server-side qidiruv.
+  /// Faqat qidiruvga mos keladigan 50 ta natijani qaytaradi.
+  static Future<List<HouseholdModel>> searchHouseholdsRemote(String query) async {
+    try {
+      final res = await _db
+          .from('households')
+          .select('*, residents(*)')
+          .or('official_address.ilike.%$query%,tuman_name.ilike.%$query%,mfy_name.ilike.%$query%,street_name.ilike.%$query%,house_number.ilike.%$query%')
+          .eq('is_active', true)
+          .limit(50);
+
+      final list = (res as List<dynamic>)
+          .map((e) => HouseholdModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      // Agar xonadondan topilmasa, residentlar ismidan ham qidirib ko'rishimiz mumkin
+      // (Eslatma: Murakkab qidiruvlar uchun DB da View yoki RPC ishlatish tavsiya etiladi)
+      return list;
+    } catch (e) {
+      print('[SupabaseService.searchHouseholdsRemote] Error: $e');
+      return [];
+    }
+  }
+
   /// Yangi xonadon yaratadi. Qaytaradi: yaratilgan HouseholdModel yoki null.
   static Future<HouseholdModel?> createHousehold(HouseholdModel h) async {
     try {
