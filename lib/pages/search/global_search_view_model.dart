@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
-import '../../models/resident_model.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/uz_converter.dart';
 import '../../theme/colors.dart';
 
 const int kMinSearchLength = 2;
@@ -95,8 +95,9 @@ class GlobalSearchViewModel extends ChangeNotifier {
 
   void _runSearch(String query) async {
     final lower = query.toLowerCase();
+    final alternativeQuery = UzConverter.convert(query).toLowerCase();
     
-    // 1. Local search first (for fast results from already loaded data)
+    // 1. Local search first
     final out = <SearchResult>[];
 
     for (final h in _households) {
@@ -119,22 +120,16 @@ class GlobalSearchViewModel extends ChangeNotifier {
         continue;
       }
 
-      final addrMatch =
-          h.officialAddress.toLowerCase().contains(lower) ||
-          (h.tumanName ?? '').toLowerCase().contains(lower) ||
-          (h.mfyName ?? '').toLowerCase().contains(lower) ||
-          (h.streetName ?? '').toLowerCase().contains(lower) ||
-          (h.houseNumber ?? '').contains(lower) ||
-          (h.buildingNumber ?? '').contains(lower);
+      final hData = (h.officialAddress + (h.tumanName ?? "") + (h.mfyName ?? "") + (h.streetName ?? "") + (h.houseNumber ?? "")).toLowerCase();
+      final addrMatch = hData.contains(lower) || (alternativeQuery.isNotEmpty && hData.contains(alternativeQuery));
 
       bool anyResidentAdded = false;
       for (final r in h.residents) {
         if (out.length >= kMaxSearchResults) break;
         if (_filterGender != null && r.gender != _filterGender) continue;
 
-        final resMatch =
-            r.displayFullName.toLowerCase().contains(lower) ||
-            (r.phonePrimary ?? '').contains(lower);
+        final rData = (r.displayFullName + (r.phonePrimary ?? "")).toLowerCase();
+        final resMatch = rData.contains(lower) || (alternativeQuery.isNotEmpty && rData.contains(alternativeQuery));
         
         if (resMatch || addrMatch) {
           out.add(SearchResult(household: h, resident: r));
@@ -147,8 +142,7 @@ class GlobalSearchViewModel extends ChangeNotifier {
       }
     }
 
-    // 2. REMOTE SEARCH (Millionlab aholi bo'lganda shu qism ishlaydi)
-    // Agar local natijalar kam bo'lsa yoki query uzun bo'lsa serverga so'rov yuboramiz
+    // 2. REMOTE SEARCH
     if (query.length >= 3 && out.length < 5) {
       _isSearching = true;
       notifyListeners();
@@ -156,11 +150,8 @@ class GlobalSearchViewModel extends ChangeNotifier {
       final remoteResults = await SupabaseService.searchHouseholdsRemote(query);
       
       for (final h in remoteResults) {
-        // Dublikat bo'lsa qo'shmaslik
         if (out.any((e) => e.household.id == h.id)) continue;
         if (out.length >= kMaxSearchResults) break;
-
-        // Remote filtrlarni qo'llash
         if (_filterDistrict != null && h.tumanName != _filterDistrict) continue;
         if (_filterMfy != null && h.mfyName != _filterMfy) continue;
 

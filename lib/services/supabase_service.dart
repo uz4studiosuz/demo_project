@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
 import '../models/user_model.dart';
+import '../utils/uz_converter.dart';
 
 class SupabaseService {
   static final SupabaseClient _db = Supabase.instance.client;
@@ -65,10 +66,12 @@ class SupabaseService {
   /// Faqat qidiruvga mos keladigan 50 ta natijani qaytaradi.
   static Future<List<HouseholdModel>> searchHouseholdsRemote(String query) async {
     try {
+      final alt = UzConverter.convert(query);
+
       final res = await _db
           .from('households')
           .select('*, residents(*)')
-          .or('official_address.ilike.%$query%,tuman_name.ilike.%$query%,mfy_name.ilike.%$query%,street_name.ilike.%$query%,house_number.ilike.%$query%')
+          .or('official_address.ilike.%$query%,tuman_name.ilike.%$query%,mfy_name.ilike.%$query%,street_name.ilike.%$query%,house_number.ilike.%$query%,official_address.ilike.%$alt%,tuman_name.ilike.%$alt%,mfy_name.ilike.%$alt%,street_name.ilike.%$alt%')
           .eq('is_active', true)
           .limit(50);
 
