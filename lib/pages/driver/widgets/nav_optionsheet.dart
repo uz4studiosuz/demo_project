@@ -13,7 +13,11 @@ import '../driver_map_page.dart';
 class NavOptionsSheet extends StatelessWidget {
   final HouseholdModel household;
   final ResidentModel? targetResident;
-  const NavOptionsSheet({super.key, required this.household, this.targetResident});
+  const NavOptionsSheet({
+    super.key,
+    required this.household,
+    this.targetResident,
+  });
 
   @override
   Widget build(BuildContext context) {

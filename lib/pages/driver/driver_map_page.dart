@@ -112,6 +112,10 @@ class _DriverMapPageState extends State<DriverMapPage> {
           setState(() {
             _isNavigating = false;
           });
+          // Orqaga qaytish (agar faol bo'lsa)
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }
         break;
 
@@ -224,7 +228,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
               ),
             ),
 
-          // ─── Orqaga tugma (navigatsiya boshlanganda yashiriladi) ─
+          // ─── Orqaga tugma (Har doim ko'rinadi) ─────────────────
           if (!_isNavigating)
             Positioned(
               top: MediaQuery.of(context).padding.top + 12,
@@ -325,7 +329,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
 
           // ─── Xarita ko'rinishini almashtirish (Satellite/Streets) ──
           Positioned(
-            bottom: _isNavigating ? 120 : 24,
+            bottom: _isNavigating ? 135 : 24,
             right: 16,
             child: Material(
               elevation: 4,
@@ -529,7 +533,7 @@ class _PatientInfoChipState extends State<_PatientInfoChip> {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     return Positioned(
-      top: topPad + 80,
+      top: topPad + 120,
       left: 12,
       child: GestureDetector(
         onTap: () => setState(() => _expanded = !_expanded),
