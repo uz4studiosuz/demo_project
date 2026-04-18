@@ -1,22 +1,11 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_mapbox_navigation/flutter_mapbox_navigation.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import '../../theme/colors.dart';
 
 import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
-import 'utils/smooth_anim.dart';
-import 'utils/navigation_helpers.dart';
-import 'widgets/google_nav_bottombar.dart';
-import 'widgets/route_preview_sheet.dart';
-import 'widgets/right_side_buttons.dart';
-import 'widgets/navigation_overlay_ui.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../theme/colors.dart';
+import 'package:geolocator/geolocator.dart';
 
 class DriverMapPage extends StatefulWidget {
   final LatLng destination;
@@ -36,653 +25,531 @@ class DriverMapPage extends StatefulWidget {
   State<DriverMapPage> createState() => _DriverMapPageState();
 }
 
-class _DriverMapPageState extends State<DriverMapPage>
-    with
-        TickerProviderStateMixin,
-        SmoothMapAnimationMixin<DriverMapPage>,
-        NavigationHelpersMixin {
-  final MapController _mapController = MapController();
-  StreamSubscription<Position>? _positionStream;
+class _DriverMapPageState extends State<DriverMapPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  // ─── Mapbox Navigation ─────────────────────────────────────────
+  MapBoxNavigationViewController? _controller;
+  bool _isNavigating = false;
+  bool _arrived = false;
   bool _isLoading = true;
-  bool _isMapReady =
-      false; // FlutterMap render bo'lguncha MapController ishlatilmaydi
 
-  // ─── Smooth interpolation ──────────────────────────────────────
-  LatLng? _rawPosition;
-  double _rawHeading = 0.0;
-  // displayPosition, displayHeading, displayMapRotation endi mixin'da
-
-  // ─── Route state & Navigation (endi mixin'da bo'lganlar)
-  double _currentSpeed = 0.0;
-
-  // // ─── Map layer ─────────────────────────────────────────────────
-  // String _mapLayer = 'y'; // 'y' - Satellite Hybrid (yo'llar bilan)
-  // ─── Map layer (Mapbox styles) ──────────────────────────────────
-  String _mapLayer = 'mapbox/satellite-v9';
-  final String _mapboxToken = dotenv.get('MAPBOX_ACCESS_TOKEN');
-
-  // ─── Timers ────────────────────────────────────────────────────
-  Timer? _routeRefreshTimer;
+  late MapBoxOptions _navigationOptions;
 
   @override
   void initState() {
     super.initState();
-    _initLocation();
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  LOCATION
-  // ═══════════════════════════════════════════════════════════════
-
-  Future<void> _initLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuv xizmati yoqilmagan')),
-          );
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Joylashuv ruxsati rad etilgan.')),
-          );
-        }
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-        ),
-      );
-      final startLatLng = LatLng(pos.latitude, pos.longitude);
-
-      if (mounted) {
-        setState(() {
-          _rawPosition = startLatLng;
-          displayPosition = startLatLng;
-          _rawHeading = pos.heading;
-          displayHeading = pos.heading;
-          _isLoading = false;
-        });
-        _fetchRoute();
-      }
-
-      // Real-time GPS stream
-      _positionStream = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 0,
-        ),
-      ).listen(_onPositionUpdate);
-
-      // Har 10 sekundda marshrutni yangilash
-      _routeRefreshTimer = Timer.periodic(const Duration(seconds: 7), (_) {
-        // Agar tezlik 1 km/soatdan (0.28 m/s) kam bo'lsa, o'tirgan joyda yangilash shart emas
-        if (isNavigationStarted && !isRouteLoading && _currentSpeed > 0.28) {
-          _fetchRoute();
-        }
-      });
-    } catch (e) {
-      debugPrint('Location init error: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Joylashuvni aniqlashda xato: $e')),
-        );
-      }
-    }
-  }
-
-  void _onPositionUpdate(Position position) {
-    if (!mounted) return;
-    final newPos = LatLng(position.latitude, position.longitude);
-    double newHeading = _rawHeading;
-
-    // Tezlik > 1 m/s bo'lganda heading yangilanadi
-    if (position.speed > 1.0 &&
-        position.heading.isFinite &&
-        position.heading != 0.0) {
-      newHeading = position.heading;
-    } else if (_rawPosition != null) {
-      // Emulator uchun yoki past tezlikda harakatlanganda kordinatalar orqali hisoblash
-      final dist = latLngDistance(_rawPosition!, newPos);
-      if (dist > 0.0000005) {
-        // Juda kichik harakatlarda sakrash bo'lmasligi uchun
-        newHeading = bearingBetween(_rawPosition!, newPos);
-      }
-    }
-
-    setState(() {
-      _currentSpeed = position.speed; // m/s -> biz keyin x/h ga o'tkazamiz
-    });
-
-    if (isNavigationStarted) {
-      followUser = true; // Navigatsiya davrida haydovchi markazdan siljimaydi
-    }
-
-    _rawPosition = newPos;
-    _rawHeading = newHeading;
-    animateToNewPosition(
-      newPos: newPos,
-      newHeading: newHeading,
-      mapController: _mapController,
-      followUser: followUser,
-      isMapReady: _isMapReady,
-      isNavigationStarted: isNavigationStarted,
+    _navigationOptions = MapBoxOptions(
+      zoom: 15.0,
+      tilt: 45.0,
+      bearing: 0.0,
+      enableRefresh: true,
+      alternatives: true,
+      voiceInstructionsEnabled: true,
+      bannerInstructionsEnabled: true,
+      allowsUTurnAtWayPoints: true,
+      mode: MapBoxNavigationMode.drivingWithTraffic,
+      units: VoiceUnits.metric,
+      simulateRoute: false,
+      language: 'uz',
+      longPressDestinationEnabled: false,
     );
-
-    if (routePoints.isEmpty && !isRouteLoading) {
-      _fetchRoute();
-    }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  ROUTE
-  // ═══════════════════════════════════════════════════════════════
-
-  Future<void> _fetchRoute() async {
-    final pos = _rawPosition;
-    if (pos == null) return;
-    setState(() => isRouteLoading = true);
-
-    try {
-      final start = '${pos.longitude},${pos.latitude}';
-      final end =
-          '${widget.destination.longitude},${widget.destination.latitude}';
-      final url = Uri.parse(
-        'http://router.project-osrm.org/route/v1/driving/$start;$end?overview=full&geometries=geojson&steps=true&alternatives=true',
-      );
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final mainRoute = data['routes'][0];
-          final List<dynamic> mainCoords = mainRoute['geometry']['coordinates'];
-          routePoints = mainCoords.map((c) => LatLng(c[1], c[0])).toList();
-
-          alternativeRoutes = [];
-          for (int i = 1; i < data['routes'].length; i++) {
-            final altRoute = data['routes'][i];
-            final List<dynamic> altCoords = altRoute['geometry']['coordinates'];
-            alternativeRoutes.add(
-              altCoords.map((c) => LatLng(c[1], c[0])).toList(),
-            );
-          }
-
-          final distMeters = mainRoute['distance'] ?? 0.0;
-          final durSeconds = mainRoute['duration'] ?? 0.0;
-          distance = (distMeters / 1000).toStringAsFixed(1);
-          duration = (durSeconds / 60).round().toString();
-
-          if (mainRoute['legs'] != null && mainRoute['legs'].isNotEmpty) {
-            turnSteps = mainRoute['legs'][0]['steps'] ?? [];
-          }
-
-          if (mounted) {
-            setState(() {});
-            if (!isNavigationStarted) {
-              centerOnRoute(
-                mapController: _mapController,
-                isMapReady: _isMapReady,
-                destination: widget.destination,
-              );
-            }
-          }
+  // ─── Route Events ───────────────────────────────────────────────
+  Future<void> _onRouteEvent(RouteEvent e) async {
+    switch (e.eventType) {
+      case MapBoxEvent.progress_change:
+        final progressEvent = e.data as RouteProgressEvent;
+        if (mounted) {
+          setState(() {
+            _arrived = progressEvent.arrived ?? false;
+          });
         }
-      }
-    } catch (e) {
-      debugPrint('Route fetch error: $e');
-    } finally {
-      if (mounted) setState(() => isRouteLoading = false);
+        break;
+
+      case MapBoxEvent.route_building:
+        if (mounted) setState(() => _isLoading = true);
+        break;
+
+      case MapBoxEvent.route_built:
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          // Marshrut tayyor bo'lishi bilan navigatsiyani avtomatik boshlaymiz
+          _startNavigation();
+        }
+        break;
+
+      case MapBoxEvent.route_build_failed:
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Marshrut qurishda xato yuz berdi'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+        break;
+
+      case MapBoxEvent.navigation_running:
+        if (mounted) setState(() => _isNavigating = true);
+        break;
+
+      case MapBoxEvent.on_arrival:
+        if (mounted) setState(() => _arrived = true);
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) Navigator.of(context).pop();
+        break;
+
+      case MapBoxEvent.navigation_finished:
+      case MapBoxEvent.navigation_cancelled:
+        if (mounted) {
+          setState(() {
+            _isNavigating = false;
+          });
+        }
+        break;
+
+      default:
+        break;
     }
   }
 
-  // Calculation methods moved to NavigationHelpersMixin
+  // ─── Start Navigation ───────────────────────────────────────────
+  Future<void> _startNavigation() async {
+    if (_controller == null) return;
+    await _controller!.startNavigation();
+    if (mounted) setState(() => _isNavigating = true);
+  }
+
+  // Stop Navigation olib tashlandi, native UI ishlatiladi
+
+
+  // Format helpers o'chirildi, native UI ishlatiladi
 
   @override
-  void dispose() {
-    _positionStream?.cancel();
-    _routeRefreshTimer?.cancel();
-    disposeAnimations();
-    _mapController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      endDrawer: _buildRightDrawer(),
+      body: Stack(
+        children: [
+          // ─── Mapbox Navigation View (to'liq ekran) ──────────────
+          MapBoxNavigationView(
+            options: _navigationOptions,
+            onRouteEvent: _onRouteEvent,
+            onCreated: (MapBoxNavigationViewController controller) async {
+              _controller = controller;
+
+              // Joriy joylashuvni aniqlaymiz
+              final Position position = await Geolocator.getCurrentPosition();
+
+              final origin = WayPoint(
+                name: 'Mening joylashuvim',
+                latitude: position.latitude,
+                longitude: position.longitude,
+              );
+
+              final destination = WayPoint(
+                name: widget.addressTitle,
+                latitude: widget.destination.latitude,
+                longitude: widget.destination.longitude,
+              );
+
+              await controller.buildRoute(
+                wayPoints: [origin, destination],
+                options: _navigationOptions,
+              );
+
+              if (mounted) setState(() => _isLoading = false);
+            },
+          ),
+
+          // ─── Loading indicator ───────────────────────────────────
+          if (_isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Marshrut hisoblanmoqda...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ─── Orqaga tugma (navigatsiya boshlanganda yashiriladi) ─
+          if (!_isNavigating)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 16,
+              child: Material(
+                elevation: 4,
+                shape: const CircleBorder(),
+                color: Colors.white,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Colors.black87,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // ─── Manzil sarlavhasi (navigatsiya boshlanganda yashiriladi) ─
+          if (!_isNavigating && !_isLoading)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 64,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.addressTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+
+          // ─── Yetib kelindi banner ────────────────────────────────
+          if (_arrived)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1B8D5B),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Manzilga yetib keldingiz!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ─── Bemor ma'lumoti (navigatsiya paytida) ───────────────
+          if (_isNavigating &&
+              (widget.targetResident != null || widget.household != null))
+            _PatientInfoChip(
+              targetResident: widget.targetResident,
+              household: widget.household,
+              onOpenInfo: () => _scaffoldKey.currentState?.openEndDrawer(),
+            ),
+        ],
+      ),
+    );
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  BUILD
-  // ═══════════════════════════════════════════════════════════════
+  Widget _buildRightDrawer() {
+    return Drawer(
+      width: MediaQuery.of(context).size.width * 0.85,
+      backgroundColor: AppColors.surface,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Bemor ma\'lumotlari',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              if (widget.targetResident != null) ...[
+                _buildDrawerSection('Asosiy bemor', [
+                  _buildDrawerInfoRow(Icons.person, widget.targetResident!.displayFullName),
+                  _buildDrawerInfoRow(Icons.phone, widget.targetResident!.phonePrimary ?? 'Kiritilmagan'),
+                  _buildDrawerInfoRow(Icons.cake, widget.targetResident!.birthDate?.toString().split(' ')[0] ?? 'Noma\'lum'),
+                ]),
+              ],
+              const SizedBox(height: 24),
+              if (widget.household != null) ...[
+                _buildDrawerSection('Oila a\'zolari', [
+                  ...widget.household!.residents.map((res) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.background,
+                      child: Icon(
+                        res.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    title: Text(res.displayFullName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    subtitle: Text(res.role ?? '', style: const TextStyle(fontSize: 12)),
+                  )),
+                ]),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildDrawerInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 15, color: AppColors.textMain),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Bemor ma'lumoti chip ────────────────────────────────────────────────────
+
+class _PatientInfoChip extends StatefulWidget {
+  final ResidentModel? targetResident;
+  final HouseholdModel? household;
+  final VoidCallback onOpenInfo;
+
+  const _PatientInfoChip({
+    this.targetResident,
+    this.household,
+    required this.onOpenInfo,
+  });
+
+  @override
+  State<_PatientInfoChip> createState() => _PatientInfoChipState();
+}
+
+class _PatientInfoChipState extends State<_PatientInfoChip> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
-
-    return Scaffold(
-      appBar: isNavigationStarted
-          ? null
-          : AppBar(
-              title: Text(widget.addressTitle),
-              backgroundColor: AppColors.surface,
-              elevation: 0,
-            ),
-      body: (_isLoading || (isRouteLoading && routePoints.isEmpty))
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(color: AppColors.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    _isLoading
-                        ? 'GPS qidirilmoqda...'
-                        : 'Marshrut hisoblanmoqda...',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+    return Positioned(
+      top: topPad + 80,
+      left: 12,
+      child: GestureDetector(
+        onTap: () => setState(() => _expanded = !_expanded),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: _expanded ? 220 : 60,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            )
-          : Stack(
-              children: [
-                // ─── MAP ─────────────────────────────────────────
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: displayPosition ?? widget.destination,
-                    initialZoom: 17.0,
-                    onMapReady: () {
-                      _isMapReady = true;
-                      if (routePoints.isNotEmpty && !isNavigationStarted) {
-                        centerOnRoute(
-                          mapController: _mapController,
-                          isMapReady: _isMapReady,
-                          destination: widget.destination,
-                        );
-                      }
-                    },
-                    onPositionChanged: (pos, hasGesture) {
-                      if (hasGesture && followUser) {
-                        if (!isNavigationStarted) {
-                          setState(() => followUser = false);
-                        }
-                      }
-                    },
-                  ),
+            ],
+          ),
+          child: _expanded
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://api.mapbox.com/styles/v1/$_mapLayer/tiles/256/{z}/{x}/{y}@2x?access_token=$_mapboxToken',
-                      userAgentPackageName: 'com.example.demoproject',
-                    ),
-
-                    // Route polylines
-                    if (routePoints.isNotEmpty)
-                      PolylineLayer(
-                        polylines: [
-                          ...alternativeRoutes.map(
-                            (alt) => Polyline(
-                              points: alt,
-                              color: Colors.grey.withValues(alpha: 0.35),
-                              strokeWidth: 5.0,
-                              strokeJoin: StrokeJoin.round,
-                              strokeCap: StrokeCap.round,
+                    Row(
+                      children: [
+                        Icon(
+                          widget.targetResident?.gender == 'FEMALE'
+                              ? Icons.person_outline
+                              : Icons.person,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.targetResident?.displayFullName ?? 'Bemor',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: AppColors.textMain,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          // Soya (outline)
-                          Polyline(
-                            points: routePoints,
-                            color: const Color(
-                              0xFF1A237E,
-                            ).withValues(alpha: 0.4),
-                            strokeWidth: 12.0,
-                            strokeJoin: StrokeJoin.round,
-                            strokeCap: StrokeCap.round,
-                          ),
-                          // Asosiy marshrut (Google-uslub — quyuq ko'k)
-                          Polyline(
-                            points: routePoints,
-                            color: const Color(0xFF1565C0),
-                            strokeWidth: 7.0,
-                            strokeJoin: StrokeJoin.round,
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ],
-                      )
-                    else if (displayPosition != null && isRouteLoading)
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: [displayPosition!, widget.destination],
-                            color: Colors.grey,
-                            strokeWidth: 3.0,
-                            pattern: StrokePattern.dashed(segments: [10, 10]),
-                          ),
-                        ],
-                      ),
-
-                    // Markers
-                    MarkerLayer(
-                      markers: [
-                        // 🚙 User (Driver) Marker — ko'k dumaloq va yo'nalish belgisi
-                        if (displayPosition != null)
-                          Marker(
-                            point: displayPosition!,
-                            width: 32,
-                            height: 32,
-                            alignment: Alignment.center,
-                            rotate:
-                                false, // Ekran yuzasiga qulf, harita aylansa ham u "Tepani" (UP) ko'rsataveradi!
-                            child: Transform.rotate(
-                              // Agar navigatsiya boshlangan bo'lsa (Xarita aylanadi), marker har doim tepani ko'rsatishi u-n 0 gradus kerak.
-                              // Chunki xarita uning ostida aylanadi.
-                              angle: isNavigationStarted
-                                  ? 0
-                                  : (displayHeading * math.pi / 180),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade600,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.2,
-                                          ),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                        // Manzil
-                        Marker(
-                          point: widget.destination,
-                          width: 50,
-                          height: 50,
-                          alignment: Alignment.topCenter,
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _expanded = false),
                           child: const Icon(
-                            Icons.location_on,
-                            color: AppColors.danger,
-                            size: 45,
+                            Icons.close,
+                            size: 18,
+                            color: Colors.grey,
                           ),
                         ),
                       ],
+                    ),
+                    if (widget.targetResident != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.targetResident!.birthDate != null ? "${DateTime.now().year - widget.targetResident!.birthDate!.year} yosh" : ""} • ${widget.targetResident!.role ?? ""}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 30,
+                      child: OutlinedButton(
+                        onPressed: widget.onOpenInfo,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          side: BorderSide(
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.05,
+                          ),
+                        ),
+                        child: const Text(
+                          "Batafsil ma'lumot",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.targetResident?.gender == 'FEMALE'
+                          ? Icons.person_outline
+                          : Icons.person,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Bemor',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-
-                // ─── NAVIGATSIYA UI (Google Maps uslubida) ───────────
-                NavigationOverlay(
-                  isNavigationStarted: isNavigationStarted,
-                  turnSteps: turnSteps,
-                  topPad: topPad,
-                  household: widget.household,
-                  targetResident: widget.targetResident,
-                  onShowFamilyMembers: _showFamilyMembers,
-                ),
-
-                // ─── Meni ko'rsat (fokus) tooltip ───────────────
-                if (isNavigationStarted && !followUser)
-                  Positioned(
-                    bottom: 120,
-                    left: 16,
-                    child: Material(
-                      elevation: 4,
-                      borderRadius: BorderRadius.circular(24),
-                      color: Colors.white,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(24),
-                        onTap: () => focusOnUser(
-                          mapController: _mapController,
-                          isMapReady: _isMapReady,
-                          rawHeading: _rawHeading,
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                color: Color(0xFF1B8D5B),
-                                size: 18,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Meni ko\'rsat',
-                                style: TextStyle(
-                                  color: Color(0xFF1B8D5B),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // ─── O'NG TOMON TUGMALAR ─────────────────────────
-                RightSideButtons(
-                  isNavigationStarted: isNavigationStarted,
-                  distance: distance,
-                  currentSpeed: _currentSpeed,
-                  displayMapRotation: displayMapRotation,
-                  mapLayer: _mapLayer,
-                  followUser: followUser,
-                  onCompassTap: () {
-                    _mapController.rotate(0);
-                    setState(() => displayMapRotation = 0);
-                  },
-                  onLayerTap: () {
-                    setState(() {
-                      if (_mapLayer == 'mapbox/satellite-v9') {
-                        _mapLayer = 'mapbox/streets-v11';
-                      } else if (_mapLayer == 'mapbox/streets-v11') {
-                        _mapLayer = 'mapbox/outdoors-v11';
-                      } else {
-                        _mapLayer = 'mapbox/satellite-v9';
-                      }
-                    });
-                  },
-                  onFocusUserTap: () => focusOnUser(
-                    mapController: _mapController,
-                    isMapReady: _isMapReady,
-                    rawHeading: _rawHeading,
-                  ),
-                ),
-
-                // ─── PASTKI PANEL ────────────────────────────────
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: isNavigationStarted
-                      ? GoogleNavBottomBar(
-                          duration: duration,
-                          distance: distance,
-                          onStopNavigation: () => stopNavigation(
-                            mapController: _mapController,
-                            isMapReady: _isMapReady,
-                            destination: widget.destination,
-                          ),
-                          onShowExternalMaps: () =>
-                              showExternalMaps(context, widget.destination),
-                          onCenterOnRoute: () {
-                            setState(() => followUser = false);
-                            centerOnRoute(
-                              mapController: _mapController,
-                              isMapReady: _isMapReady,
-                              destination: widget.destination,
-                            );
-                            _mapController.rotate(0);
-                          },
-                        )
-                      : RoutePreviewSheet(
-                          duration: duration,
-                          distance: distance,
-                          onStartNavigation: () => startNavigation(
-                            mapController: _mapController,
-                            isMapReady: _isMapReady,
-                            rawHeading: _rawHeading,
-                            onHeadingUpdate: (h) =>
-                                setState(() => _rawHeading = h),
-                          ),
-                        ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  void _showFamilyMembers() {
-    if (widget.household == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Text(
-                  'Oila a\'zolari',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMain,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${widget.household!.residents.length}',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                itemCount: widget.household!.residents.length,
-                separatorBuilder: (c, i) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final res = widget.household!.residents[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.background,
-                      child: Icon(
-                        res.gender == 'FEMALE'
-                            ? Icons.person_outline
-                            : Icons.person,
-                        color: AppColors.textSecondary,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      res.displayFullName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    subtitle: Row(
-                      children: [
-                        if (res.role != null) ...[
-                          Text(
-                            res.role!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const Text(
-                            '  •  ',
-                            style: TextStyle(color: AppColors.textSecondary),
-                          ),
-                        ],
-                        Text(
-                          res.phonePrimary ?? 'Telefon yo\'q',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: null,
-                  );
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 }
+
+// ─── Navigatsiya pastki paneli ───────────────────────────────────────────────
+
+// _NavigationBottomBar o'chirildi, native UI ishlatiladi
+
