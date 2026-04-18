@@ -12,6 +12,10 @@ import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
 import 'utils/smooth_anim.dart';
 import 'utils/navigation_helpers.dart';
+import 'widgets/google_nav_bottombar.dart';
+import 'widgets/route_preview_sheet.dart';
+import 'widgets/right_side_buttons.dart';
+import 'widgets/navigation_overlay_ui.dart';
 
 class DriverMapPage extends StatefulWidget {
   final LatLng destination;
@@ -32,7 +36,10 @@ class DriverMapPage extends StatefulWidget {
 }
 
 class _DriverMapPageState extends State<DriverMapPage>
-    with TickerProviderStateMixin, SmoothMapAnimationMixin<DriverMapPage>, NavigationHelpersMixin {
+    with
+        TickerProviderStateMixin,
+        SmoothMapAnimationMixin<DriverMapPage>,
+        NavigationHelpersMixin {
   final MapController _mapController = MapController();
   StreamSubscription<Position>? _positionStream;
   bool _isLoading = true;
@@ -46,16 +53,6 @@ class _DriverMapPageState extends State<DriverMapPage>
 
   // ─── Route state & Navigation (endi mixin'da bo'lganlar)
   double _currentSpeed = 0.0;
-  bool _isPatientInfoExpanded = false;
-
-  // Stansiyalar (Branches / Punktlar)
-  final List<LatLng> _branches = const [
-    LatLng(40.380000, 71.780000),
-    LatLng(40.385000, 71.775000),
-    LatLng(40.370000, 71.790000),
-    LatLng(40.382000, 71.785000),
-    LatLng(40.375000, 71.770000),
-  ];
 
   // ─── Map layer ─────────────────────────────────────────────────
   String _mapLayer = 'm';
@@ -258,7 +255,6 @@ class _DriverMapPageState extends State<DriverMapPage>
     super.dispose();
   }
 
-
   // ═══════════════════════════════════════════════════════════════
   //  BUILD
   // ═══════════════════════════════════════════════════════════════
@@ -305,7 +301,11 @@ class _DriverMapPageState extends State<DriverMapPage>
                     onMapReady: () {
                       _isMapReady = true;
                       if (routePoints.isNotEmpty && !isNavigationStarted) {
-                        centerOnRoute(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination);
+                        centerOnRoute(
+                          mapController: _mapController,
+                          isMapReady: _isMapReady,
+                          destination: widget.destination,
+                        );
                       }
                     },
                     onPositionChanged: (pos, hasGesture) {
@@ -371,30 +371,6 @@ class _DriverMapPageState extends State<DriverMapPage>
                     // Markers
                     MarkerLayer(
                       markers: [
-                        // Punktlar (Branches)
-                        ..._branches.map(
-                          (b) => Marker(
-                            point: b,
-                            width: 32,
-                            height: 32,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade700,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.local_hospital,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-
                         // 🚙 User (Driver) Marker — ko'k dumaloq va yo'nalish belgisi
                         if (displayPosition != null)
                           Marker(
@@ -465,272 +441,15 @@ class _DriverMapPageState extends State<DriverMapPage>
                   ],
                 ),
 
-                // ═══════════════════════════════════════════════════
-                //  NAVIGATSIYA UI (Google Maps uslubida)
-                // ═══════════════════════════════════════════════════
-                if (isNavigationStarted && turnSteps.isNotEmpty) ...[
-                  if (turnSteps.length > 1)
-                    // ─── YUQORI PANEL: "500 m dan keyin ↰" ─────────────
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        color: const Color(0xFF1B8D5B),
-                        padding: EdgeInsets.only(
-                          top: topPad + 12,
-                          left: 20,
-                          right: 20,
-                          bottom: 16,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '${formatDistance(turnSteps[0]['distance'] ?? 0)} dan keyin',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(
-                              getStepIcon(
-                                turnSteps[1]['maneuver']['type'] ?? '',
-                                turnSteps[1]['maneuver']['modifier'] ?? '',
-                              ),
-                              color: Colors.white,
-                              size: 36,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    // Agar faqat bitta step qolgan bo'lsa (manzilga yetib kelish)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        color: const Color(0xFF1B8D5B),
-                        padding: EdgeInsets.only(
-                          top: topPad + 12,
-                          left: 20,
-                          right: 20,
-                          bottom: 16,
-                        ),
-                        child: Center(
-                          child: Text(
-                            translateManeuver(
-                              turnSteps[0]['maneuver']['type'] ?? '',
-                              turnSteps[0]['maneuver']['modifier'] ?? '',
-                            ),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // ─── "Keyin" ko'rsatkich ───────────────────────
-                  if (turnSteps.length > 1)
-                    Positioned(
-                      top: topPad + 86,
-                      left: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF145A3A),
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'Keyin',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  getStepIcon(
-                                    turnSteps[1]['maneuver']['type'] ?? '',
-                                    turnSteps[1]['maneuver']['modifier'] ?? '',
-                                  ),
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ],
-                            ),
-                            Text(
-                              formatDistance(turnSteps[0]['distance'] ?? 0),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // ─── Bemor haqida ma'lumot (Patient info) ───────────
-                  if (widget.targetResident != null || widget.household != null)
-                    Positioned(
-                      top: topPad + (turnSteps.length > 1 ? 144 : 86),
-                      left: 12,
-                      child: GestureDetector(
-                        onTap: () => setState(
-                          () =>
-                              _isPatientInfoExpanded = !_isPatientInfoExpanded,
-                        ),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: _isPatientInfoExpanded ? 220 : 60,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: _isPatientInfoExpanded
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          widget.targetResident?.gender ==
-                                                  'FEMALE'
-                                              ? Icons.person_outline
-                                              : Icons.person,
-                                          color: AppColors.primary,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            widget
-                                                    .targetResident
-                                                    ?.displayFullName ??
-                                                'Bemor',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: AppColors.textMain,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        GestureDetector(
-                                          onTap: () => setState(
-                                            () =>
-                                                _isPatientInfoExpanded = false,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close,
-                                            size: 18,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    if (widget.targetResident?.role != null)
-                                      Text(
-                                        '${widget.targetResident!.birthDate != null ? "${DateTime.now().year - widget.targetResident!.birthDate!.year} yosh" : ""} • ${widget.targetResident!.role!}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      height: 30,
-                                      child: OutlinedButton(
-                                        onPressed: _showFamilyMembers,
-                                        style: OutlinedButton.styleFrom(
-                                          padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          side: BorderSide(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.5,
-                                            ),
-                                          ),
-                                          backgroundColor: AppColors.primary
-                                              .withValues(alpha: 0.05),
-                                        ),
-                                        child: const Text(
-                                          "Oila a'zolarini ko'rish",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      widget.targetResident?.gender == 'FEMALE'
-                                          ? Icons.person_outline
-                                          : Icons.person,
-                                      color: AppColors.primary,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Bemor',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                ],
+                // ─── NAVIGATSIYA UI (Google Maps uslubida) ───────────
+                NavigationOverlay(
+                  isNavigationStarted: isNavigationStarted,
+                  turnSteps: turnSteps,
+                  topPad: topPad,
+                  household: widget.household,
+                  targetResident: widget.targetResident,
+                  onShowFamilyMembers: _showFamilyMembers,
+                ),
 
                 // ─── Meni ko'rsat (fokus) tooltip ───────────────
                 if (isNavigationStarted && !followUser)
@@ -743,7 +462,11 @@ class _DriverMapPageState extends State<DriverMapPage>
                       color: Colors.white,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(24),
-                        onTap: () => focusOnUser(mapController: _mapController, isMapReady: _isMapReady, rawHeading: _rawHeading),
+                        onTap: () => focusOnUser(
+                          mapController: _mapController,
+                          isMapReady: _isMapReady,
+                          rawHeading: _rawHeading,
+                        ),
                         child: const Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: 16,
@@ -774,131 +497,34 @@ class _DriverMapPageState extends State<DriverMapPage>
                   ),
 
                 // ─── O'NG TOMON TUGMALAR ─────────────────────────
-                Positioned(
-                  bottom: isNavigationStarted
-                      ? 90
-                      : (distance.isNotEmpty ? 155 : 80),
-                  right: 12,
-                  child: Column(
-                    children: [
-                      // Tezlik o'lchagich (Speedometer)
-                      if (isNavigationStarted)
-                        Container(
-                          width: 46,
-                          height: 46,
-                          margin: const EdgeInsets.only(bottom: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.red, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  (_currentSpeed * 3.6).round().toString(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    height: 1.0,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const Text(
-                                  'km/h',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    height: 1.0,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // Kompas
-                      if (isNavigationStarted)
-                        _buildControlButton(
-                          heroTag: 'compass_btn',
-                          icon: Transform.rotate(
-                            angle: displayMapRotation * math.pi / 180,
-                            child: const Icon(
-                              Icons.navigation,
-                              color: Colors.red,
-                              size: 22,
-                            ),
-                          ),
-                          onTap: () {
-                            // Shimolga qarab qo'yish
-                            _mapController.rotate(0);
-                            setState(() => displayMapRotation = 0);
-                          },
-                        ),
-                      if (isNavigationStarted) const SizedBox(height: 10),
-
-                      // Qatlam
-                      _buildControlButton(
-                        heroTag: 'layer_toggle',
-                        icon: Icon(
-                          _mapLayer == 'm'
-                              ? Icons.layers
-                              : (_mapLayer == 'y'
-                                    ? Icons.layers_outlined
-                                    : Icons.satellite_alt),
-                          color: Colors.black87,
-                          size: 22,
-                        ),
-                        onTap: () {
-                          setState(() {
-                            if (_mapLayer == 'm') {
-                              _mapLayer = 'y';
-                            } else if (_mapLayer == 'y') {
-                              _mapLayer = 's';
-                            } else {
-                              _mapLayer = 'm';
-                            }
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Fokus
-                      _buildControlButton(
-                        heroTag: 'focus_user',
-                        icon: Icon(
-                          Icons.my_location,
-                          color: followUser
-                              ? AppColors.primary
-                              : Colors.black54,
-                          size: 22,
-                        ),
-                        onTap: () => focusOnUser(mapController: _mapController, isMapReady: _isMapReady, rawHeading: _rawHeading),
-                      ),
-
-                      if (isNavigationStarted) ...[
-                        const SizedBox(height: 10),
-                        // Ovoz (placeholder)
-                        _buildControlButton(
-                          heroTag: 'sound_btn',
-                          icon: const Icon(
-                            Icons.volume_up,
-                            color: Colors.black87,
-                            size: 22,
-                          ),
-                          onTap: () {},
-                        ),
-                      ],
-                    ],
+                RightSideButtons(
+                  isNavigationStarted: isNavigationStarted,
+                  distance: distance,
+                  currentSpeed: _currentSpeed,
+                  displayMapRotation: displayMapRotation,
+                  mapLayer: _mapLayer,
+                  followUser: followUser,
+                  onCompassTap: () {
+                    _mapController.rotate(0);
+                    setState(() => displayMapRotation = 0);
+                  },
+                  onLayerTap: () {
+                    setState(() {
+                      if (_mapLayer == 'm') {
+                        _mapLayer = 'y';
+                      } else if (_mapLayer == 'y') {
+                        _mapLayer = 's';
+                      } else {
+                        _mapLayer = 'm';
+                      }
+                    });
+                  },
+                  onFocusUserTap: () => focusOnUser(
+                    mapController: _mapController,
+                    isMapReady: _isMapReady,
+                    rawHeading: _rawHeading,
                   ),
+                  onSoundTap: () {},
                 ),
 
                 // ─── PASTKI PANEL ────────────────────────────────
@@ -907,289 +533,40 @@ class _DriverMapPageState extends State<DriverMapPage>
                   left: 0,
                   right: 0,
                   child: isNavigationStarted
-                      ? _buildNavigationBottomBar()
-                      : _buildRoutePreviewSheet(),
+                      ? GoogleNavBottomBar(
+                          duration: duration,
+                          distance: distance,
+                          onStopNavigation: () => stopNavigation(
+                            mapController: _mapController,
+                            isMapReady: _isMapReady,
+                            destination: widget.destination,
+                          ),
+                          onShowExternalMaps: () =>
+                              showExternalMaps(context, widget.destination),
+                          onCenterOnRoute: () {
+                            setState(() => followUser = false);
+                            centerOnRoute(
+                              mapController: _mapController,
+                              isMapReady: _isMapReady,
+                              destination: widget.destination,
+                            );
+                            _mapController.rotate(0);
+                          },
+                        )
+                      : RoutePreviewSheet(
+                          duration: duration,
+                          distance: distance,
+                          onStartNavigation: () => startNavigation(
+                            mapController: _mapController,
+                            isMapReady: _isMapReady,
+                            rawHeading: _rawHeading,
+                            onHeadingUpdate: (h) =>
+                                setState(() => _rawHeading = h),
+                          ),
+                        ),
                 ),
               ],
             ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  CONTROL BUTTON (Google style — oq aylana)
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildControlButton({
-    required String heroTag,
-    required Widget icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      elevation: 3,
-      shape: const CircleBorder(),
-      color: Colors.white,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  GOOGLE NAVIGATION BOTTOM BAR (navigatsiya paytidagi pastki panel)
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildNavigationBottomBar() {
-    final etaMinutes = int.tryParse(duration) ?? 0;
-    final eta = DateTime.now().add(Duration(minutes: etaMinutes));
-    final etaString = '${eta.hour}:${eta.minute.toString().padLeft(2, '0')}';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              // ✕ Tugmasi
-              GestureDetector(
-                onTap: () => stopNavigation(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.black54,
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Vaqt va masofa
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          duration,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1B8D5B),
-                          ),
-                        ),
-                        const Text(
-                          ' daq.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1B8D5B),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1B8D5B),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '$distance km  •  $etaString',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // Tashqi kartalar
-              GestureDetector(
-                onTap: () => showExternalMaps(context, widget.destination),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.map_outlined,
-                    color: Colors.black54,
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Marshrut ko'rinishi
-              GestureDetector(
-                onTap: () {
-                  setState(() => followUser = false);
-                  centerOnRoute(mapController: _mapController, isMapReady: _isMapReady, destination: widget.destination);
-                  _mapController.rotate(0);
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.alt_route,
-                    color: Colors.black54,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  ROUTE PREVIEW SHEET (navigatsiya boshlanmagan holatda)
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildRoutePreviewSheet() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Tutqich
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              if (distance.isNotEmpty && duration.isNotEmpty) ...[
-                // Sarlavha + masofa bir qatorda
-                Row(
-                  children: [
-                    const Text(
-                      'Tez Yordam',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$duration daq.',
-                      style: const TextStyle(
-                        color: Color(0xFF81C784),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      ' ($distance km)',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Eng tezkor marshrut',
-                    style: TextStyle(color: Colors.white38, fontSize: 13),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                // Tugmalar
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: () => startNavigation(
-                      mapController: _mapController,
-                      isMapReady: _isMapReady,
-                      rawHeading: _rawHeading,
-                      onHeadingUpdate: (h) => setState(() => _rawHeading = h),
-                    ),
-                    icon: const Icon(
-                      Icons.navigation,
-                      color: Colors.black87,
-                      size: 22,
-                    ),
-                    label: const Text(
-                      'Boshlash',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF80DEEA),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 
