@@ -13,7 +13,6 @@ class RightSideButtons extends StatelessWidget {
   final VoidCallback onCompassTap;
   final VoidCallback onLayerTap;
   final VoidCallback onFocusUserTap;
-  final VoidCallback onSoundTap;
 
   const RightSideButtons({
     super.key,
@@ -26,13 +25,12 @@ class RightSideButtons extends StatelessWidget {
     required this.onCompassTap,
     required this.onLayerTap,
     required this.onFocusUserTap,
-    required this.onSoundTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: isNavigationStarted ? 90 : (distance.isNotEmpty ? 155 : 80),
+      bottom: isNavigationStarted ? 120 : (distance.isNotEmpty ? 155 : 80),
       right: 12,
       child: Column(
         children: [
@@ -100,9 +98,11 @@ class RightSideButtons extends StatelessWidget {
           MapControlButton(
             heroTag: 'layer_toggle',
             icon: Icon(
-              mapLayer == 'm'
-                  ? Icons.layers
-                  : (mapLayer == 'y' ? Icons.layers_outlined : Icons.satellite_alt),
+              mapLayer == 'mapbox/satellite-v9'
+                  ? Icons.satellite_alt
+                  : (mapLayer == 'mapbox/streets-v11'
+                        ? Icons.map
+                        : Icons.terrain),
               color: Colors.black87,
               size: 22,
             ),
@@ -120,20 +120,6 @@ class RightSideButtons extends StatelessWidget {
             ),
             onTap: onFocusUserTap,
           ),
-
-          if (isNavigationStarted) ...[
-            const SizedBox(height: 10),
-            // Ovoz (placeholder)
-            MapControlButton(
-              heroTag: 'sound_btn',
-              icon: const Icon(
-                Icons.volume_up,
-                color: Colors.black87,
-                size: 22,
-              ),
-              onTap: onSoundTap,
-            ),
-          ],
         ],
       ),
     );

@@ -54,8 +54,12 @@ class _DriverMapPageState extends State<DriverMapPage>
   // ─── Route state & Navigation (endi mixin'da bo'lganlar)
   double _currentSpeed = 0.0;
 
-  // ─── Map layer ─────────────────────────────────────────────────
-  String _mapLayer = 'm';
+  // // ─── Map layer ─────────────────────────────────────────────────
+  // String _mapLayer = 'y'; // 'y' - Satellite Hybrid (yo'llar bilan)
+  // ─── Map layer (Mapbox styles) ──────────────────────────────────
+  String _mapLayer = 'mapbox/satellite-v9';
+  final String _mapboxToken =
+      'pk.eyJ1IjoidXNtb3hhbiIsImEiOiJjbW8xYmRiMGkwZzcxMnBzNnAxazM0eXM5In0.rVhy5TTBtU2oW5eTJIKjaw';
 
   // ─── Timers ────────────────────────────────────────────────────
   Timer? _routeRefreshTimer;
@@ -123,8 +127,9 @@ class _DriverMapPageState extends State<DriverMapPage>
       ).listen(_onPositionUpdate);
 
       // Har 10 sekundda marshrutni yangilash
-      _routeRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-        if (isNavigationStarted && !isRouteLoading) {
+      _routeRefreshTimer = Timer.periodic(const Duration(seconds: 7), (_) {
+        // Agar tezlik 1 km/soatdan (0.28 m/s) kam bo'lsa, o'tirgan joyda yangilash shart emas
+        if (isNavigationStarted && !isRouteLoading && _currentSpeed > 0.28) {
           _fetchRoute();
         }
       });
@@ -319,7 +324,7 @@ class _DriverMapPageState extends State<DriverMapPage>
                   children: [
                     TileLayer(
                       urlTemplate:
-                          'https://mt1.google.com/vt/lyrs=$_mapLayer&hl=uz&x={x}&y={y}&z={z}',
+                          'https://api.mapbox.com/styles/v1/$_mapLayer/tiles/256/{z}/{x}/{y}@2x?access_token=$_mapboxToken',
                       userAgentPackageName: 'com.example.demoproject',
                     ),
 
@@ -410,15 +415,6 @@ class _DriverMapPageState extends State<DriverMapPage>
                                       ],
                                     ),
                                   ),
-                                  // Yo'nalishni bildiruvchi kichik pointer (tepaga qarab turadi)
-                                  const Positioned(
-                                    top: 2,
-                                    child: Icon(
-                                      Icons.keyboard_arrow_up,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -454,7 +450,7 @@ class _DriverMapPageState extends State<DriverMapPage>
                 // ─── Meni ko'rsat (fokus) tooltip ───────────────
                 if (isNavigationStarted && !followUser)
                   Positioned(
-                    bottom: 100,
+                    bottom: 120,
                     left: 16,
                     child: Material(
                       elevation: 4,
@@ -510,12 +506,12 @@ class _DriverMapPageState extends State<DriverMapPage>
                   },
                   onLayerTap: () {
                     setState(() {
-                      if (_mapLayer == 'm') {
-                        _mapLayer = 'y';
-                      } else if (_mapLayer == 'y') {
-                        _mapLayer = 's';
+                      if (_mapLayer == 'mapbox/satellite-v9') {
+                        _mapLayer = 'mapbox/streets-v11';
+                      } else if (_mapLayer == 'mapbox/streets-v11') {
+                        _mapLayer = 'mapbox/outdoors-v11';
                       } else {
-                        _mapLayer = 'm';
+                        _mapLayer = 'mapbox/satellite-v9';
                       }
                     });
                   },
@@ -524,7 +520,6 @@ class _DriverMapPageState extends State<DriverMapPage>
                     isMapReady: _isMapReady,
                     rawHeading: _rawHeading,
                   ),
-                  onSoundTap: () {},
                 ),
 
                 // ─── PASTKI PANEL ────────────────────────────────
