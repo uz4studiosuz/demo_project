@@ -54,6 +54,7 @@ dependencies:
   liquid_glass_bar: ^0.1.0
   supabase_flutter: ^2.12.2
   dropdown_search: ^7.0.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,7 @@ flutter:
   generate: true
 
   assets:
+    - .env
     - assets/images/
     - assets/data/
 

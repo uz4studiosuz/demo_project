@@ -16,6 +16,7 @@ import 'widgets/google_nav_bottombar.dart';
 import 'widgets/route_preview_sheet.dart';
 import 'widgets/right_side_buttons.dart';
 import 'widgets/navigation_overlay_ui.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DriverMapPage extends StatefulWidget {
   final LatLng destination;
@@ -58,8 +59,7 @@ class _DriverMapPageState extends State<DriverMapPage>
   // String _mapLayer = 'y'; // 'y' - Satellite Hybrid (yo'llar bilan)
   // ─── Map layer (Mapbox styles) ──────────────────────────────────
   String _mapLayer = 'mapbox/satellite-v9';
-  final String _mapboxToken =
-      'pk.eyJ1IjoidXNtb3hhbiIsImEiOiJjbW8xYmRiMGkwZzcxMnBzNnAxazM0eXM5In0.rVhy5TTBtU2oW5eTJIKjaw';
+  final String _mapboxToken = dotenv.get('MAPBOX_ACCESS_TOKEN');
 
   // ─── Timers ────────────────────────────────────────────────────
   Timer? _routeRefreshTimer;

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -72,8 +73,20 @@ mixin SmoothMapAnimationMixin<T extends StatefulWidget> on State<T>, TickerProvi
       if (!mounted) return;
       final animatedPos = LatLng(_latAnim!.value, _lngAnim!.value);
       setState(() => displayPosition = animatedPos);
+      
       if (followUser && isMapReady) {
-        mapController.move(animatedPos, mapController.camera.zoom);
+        if (isNavigationStarted) {
+          // Navigatsiya paytida mashina pastda turishi uchun markazni oldinga suramiz
+          final zoom = mapController.camera.zoom;
+          final offsetDistance = 160000 / math.pow(2, zoom);
+          
+          final Distance distance = const Distance();
+          final centerPos = distance.offset(animatedPos, offsetDistance, newHeading);
+          
+          mapController.move(centerPos, zoom);
+        } else {
+          mapController.move(animatedPos, mapController.camera.zoom);
+        }
       }
     });
 

@@ -13,9 +13,11 @@ import 'package:beemor/theme/colors.dart';
 import 'package:beemor/models/user_role.dart';
 import 'package:beemor/pages/surveyor/surveyor_dashboard.dart';
 import 'package:beemor/pages/driver/driver_dashboard.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
