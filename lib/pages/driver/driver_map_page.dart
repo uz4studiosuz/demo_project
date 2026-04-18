@@ -32,6 +32,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
   bool _isNavigating = false;
   bool _arrived = false;
   bool _isLoading = true;
+  bool _isSatellite = false;
 
   late MapBoxOptions _navigationOptions;
 
@@ -126,8 +127,39 @@ class _DriverMapPageState extends State<DriverMapPage> {
     if (mounted) setState(() => _isNavigating = true);
   }
 
-  // Stop Navigation olib tashlandi, native UI ishlatiladi
+  void _toggleMapStyle() {
+    if (_controller == null) return;
 
+    setState(() {
+      _isSatellite = !_isSatellite;
+    });
+
+    _navigationOptions = MapBoxOptions(
+      zoom: 15.0,
+      tilt: 45.0,
+      bearing: 0.0,
+      enableRefresh: true,
+      alternatives: true,
+      voiceInstructionsEnabled: true,
+      bannerInstructionsEnabled: true,
+      allowsUTurnAtWayPoints: true,
+      mode: MapBoxNavigationMode.drivingWithTraffic,
+      units: VoiceUnits.metric,
+      simulateRoute: false,
+      language: 'uz',
+      longPressDestinationEnabled: false,
+      mapStyleUrlDay: _isSatellite
+          ? 'mapbox://styles/mapbox/satellite-streets-v11'
+          : 'mapbox://styles/mapbox/streets-v11',
+      mapStyleUrlNight: _isSatellite
+          ? 'mapbox://styles/mapbox/satellite-streets-v11'
+          : 'mapbox://styles/mapbox/dark-v10',
+    );
+
+    _controller!.startNavigation(options: _navigationOptions);
+  }
+
+  // Stop Navigation olib tashlandi, native UI ishlatiladi
 
   // Format helpers o'chirildi, native UI ishlatiladi
 
@@ -291,6 +323,53 @@ class _DriverMapPageState extends State<DriverMapPage> {
               ),
             ),
 
+          // ─── Xarita ko'rinishini almashtirish (Satellite/Streets) ──
+          Positioned(
+            bottom: _isNavigating ? 120 : 24,
+            right: 16,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(30),
+              color: Colors.white,
+              child: InkWell(
+                onTap: _toggleMapStyle,
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isSatellite ? Icons.map_outlined : Icons.satellite_alt,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isSatellite ? 'Normal' : 'Yo\'ldosh',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // ─── Bemor ma'lumoti (navigatsiya paytida) ───────────────
           if (_isNavigating &&
               (widget.targetResident != null || widget.household != null))
@@ -334,27 +413,52 @@ class _DriverMapPageState extends State<DriverMapPage> {
               const Divider(height: 32),
               if (widget.targetResident != null) ...[
                 _buildDrawerSection('Asosiy bemor', [
-                  _buildDrawerInfoRow(Icons.person, widget.targetResident!.displayFullName),
-                  _buildDrawerInfoRow(Icons.phone, widget.targetResident!.phonePrimary ?? 'Kiritilmagan'),
-                  _buildDrawerInfoRow(Icons.cake, widget.targetResident!.birthDate?.toString().split(' ')[0] ?? 'Noma\'lum'),
+                  _buildDrawerInfoRow(
+                    Icons.person,
+                    widget.targetResident!.displayFullName,
+                  ),
+                  _buildDrawerInfoRow(
+                    Icons.phone,
+                    widget.targetResident!.phonePrimary ?? 'Kiritilmagan',
+                  ),
+                  _buildDrawerInfoRow(
+                    Icons.cake,
+                    widget.targetResident!.birthDate?.toString().split(
+                          ' ',
+                        )[0] ??
+                        'Noma\'lum',
+                  ),
                 ]),
               ],
               const SizedBox(height: 24),
               if (widget.household != null) ...[
                 _buildDrawerSection('Oila a\'zolari', [
-                  ...widget.household!.residents.map((res) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.background,
-                      child: Icon(
-                        res.gender == 'FEMALE' ? Icons.person_outline : Icons.person,
-                        size: 20,
-                        color: AppColors.primary,
+                  ...widget.household!.residents.map(
+                    (res) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.background,
+                        child: Icon(
+                          res.gender == 'FEMALE'
+                              ? Icons.person_outline
+                              : Icons.person,
+                          size: 20,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      title: Text(
+                        res.displayFullName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        res.role ?? '',
+                        style: const TextStyle(fontSize: 12),
                       ),
                     ),
-                    title: Text(res.displayFullName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    subtitle: Text(res.role ?? '', style: const TextStyle(fontSize: 12)),
-                  )),
+                  ),
                 ]),
               ],
             ],
@@ -552,4 +656,3 @@ class _PatientInfoChipState extends State<_PatientInfoChip> {
 // ─── Navigatsiya pastki paneli ───────────────────────────────────────────────
 
 // _NavigationBottomBar o'chirildi, native UI ishlatiladi
-
