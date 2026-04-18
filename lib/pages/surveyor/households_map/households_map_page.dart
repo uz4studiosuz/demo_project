@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cache/flutter_map_cache.dart';
+import 'package:http_cache_file_store/http_cache_file_store.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -14,7 +17,6 @@ import 'widgets/map_layer_builder.dart';
 import 'widgets/map_top_info_pill.dart';
 import 'widgets/map_floating_actions.dart';
 
-
 // ═══════════════════════════════════════════════════════════════════════════
 //  HouseholdsMapPage — Entry point
 // ═══════════════════════════════════════════════════════════════════════════
@@ -23,7 +25,11 @@ class HouseholdsMapPage extends StatelessWidget {
   final HouseholdModel? focusHousehold;
   final void Function(HouseholdModel)? onGetDirections;
 
-  const HouseholdsMapPage({super.key, this.focusHousehold, this.onGetDirections});
+  const HouseholdsMapPage({
+    super.key,
+    this.focusHousehold,
+    this.onGetDirections,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +55,20 @@ class _HouseholdsMapView extends StatefulWidget {
 
 class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
   final MapController _mapController = MapController();
+  late LatLng _currentPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPosition = widget.focusHousehold != null
+        ? LatLng(widget.focusHousehold!.latitude, widget.focusHousehold!.longitude)
+        : const LatLng(40.3864, 71.7825);
+    
+    // Ma'lumotlarni yuklashni ta'minlaymiz
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
+    });
+  }
 
   Widget _buildLoadingState() {
     return Scaffold(
@@ -140,10 +160,7 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
             const SizedBox(height: 4),
             const Text(
               'Iltimos kuting',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -163,6 +180,8 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
       builder: (context, provider, _) {
         final households = provider.households;
         final currentZoom = viewModel.currentZoom;
+        
+        debugPrint('🔵 [HouseholdsMapPage] Xonadonlar soni: ${households.length}');
 
         return Scaffold(
           body: Stack(
@@ -182,9 +201,10 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                   ),
                   onMapReady: () =>
                       context.read<HouseholdsMapViewModel>().setMapReady(),
-                  onPositionChanged: (pos, _) => context
-                      .read<HouseholdsMapViewModel>()
-                      .updateZoom(pos.zoom),
+                  onPositionChanged: (pos, _) {
+                    context.read<HouseholdsMapViewModel>().updateZoom(pos.zoom);
+                    constrainMap(pos, _mapController);
+                  },
                 ),
                 children: [
                   TileLayer(
@@ -192,6 +212,12 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                         'https://mt1.google.com/vt/lyrs=${viewModel.mapType}&hl=uz&x={x}&y={y}&z={z}',
                     userAgentPackageName: 'com.example.demoproject',
                     maxZoom: 20,
+                    tileProvider: CachedTileProvider(
+                      // Max 30 days cache, stored in temp/map_tiles_cache
+                      store: FileCacheStore(
+                        "${Directory.systemTemp.path}/map_tiles_cache",
+                      ),
+                    ),
                   ),
                   if (kShowMapBorder)
                     PolylineLayer(
@@ -232,8 +258,8 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
           ),
           floatingActionButton: MapFloatingActions(
             viewModel: viewModel,
-            onLocationPress: viewModel.isLocationLoading 
-                ? null 
+            onLocationPress: viewModel.isLocationLoading
+                ? null
                 : () async {
                     final latLng = await viewModel.getMyLocation(context);
                     if (latLng != null) {
@@ -246,4 +272,3 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
     );
   }
 }
-

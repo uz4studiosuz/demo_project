@@ -1,3 +1,14 @@
+import java.util.Properties
+
+// 1. local.properties faylini yuklash logikasi (tepaga qo'shildi)
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { 
+        localProperties.load(it) 
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -6,7 +17,8 @@ allprojects {
             url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
             credentials {
                 username = "mapbox"
-                password = providers.gradleProperty("MAPBOX_DOWNLOADS_TOKEN").get()
+                // 2. localProperties endi bu yerda unresolved reference bo'lmaydi
+                password = localProperties.getProperty("MAPBOX_DOWNLOADS_TOKEN") ?: ""
             }
             authentication {
                 create<BasicAuthentication>("basic")
@@ -15,6 +27,7 @@ allprojects {
     }
 }
 
+// Build directory logikasi
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")
@@ -25,6 +38,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

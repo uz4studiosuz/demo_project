@@ -72,9 +72,16 @@ List<Marker> buildMapMarkers({
 
   // currentZoom >= 15
   final markers = <Marker>[];
+  
+  // Faqat koordinatasi bor xonadonlarni olamiz
+  final validHouseholds = households.where((h) => h.latitude != 0 && h.longitude != 0).toList();
+  
+  if (validHouseholds.isEmpty && households.isNotEmpty) {
+     debugPrint('⚠️ [buildMapMarkers] DIQQAT: ${households.length} ta xonadon bor, lekin barchasining koordinatasi 0!');
+  }
 
   // HOUSE
-  for (final h in households.where((h) => h.propertyType != kApartment)) {
+  for (final h in validHouseholds.where((h) => h.propertyType == kHouse)) {
     final isFocused = focusHousehold?.id == h.id;
     markers.add(Marker(
       point: LatLng(h.latitude, h.longitude),
@@ -148,7 +155,7 @@ List<Marker> buildMapMarkers({
   }
 
   // APARTMENT
-  for (final entry in viewModel.buildingGroups(households).entries) {
+  for (final entry in viewModel.buildingGroups(validHouseholds).entries) {
      final apartments = entry.value;
      final first = apartments.first;
      final point = LatLng(first.latitude, first.longitude);

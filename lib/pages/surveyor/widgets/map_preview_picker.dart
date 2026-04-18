@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cache/flutter_map_cache.dart';
+import 'package:http_cache_file_store/http_cache_file_store.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../theme/colors.dart';
 import '../../../additional/map_border.dart';
@@ -115,6 +118,11 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                           'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
                       userAgentPackageName: 'com.example.demoproject',
                       maxZoom: 20,
+                      tileProvider: CachedTileProvider(
+                        store: FileCacheStore(
+                          "${Directory.systemTemp.path}/map_tiles_cache",
+                        ),
+                      ),
                     ),
                     if (kShowMapBorder)
                       PolylineLayer(

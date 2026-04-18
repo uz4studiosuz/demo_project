@@ -6,7 +6,6 @@ import '../../../theme/colors.dart';
 import '../../../models/household_model.dart';
 import '../../login/login_page.dart';
 import '../../surveyor/households_map/households_map_page.dart';
-import '../../surveyor/households_map/households_map_page.dart';
 import '../../search/global_search_page.dart';
 import 'nav_optionsheet.dart';
 import '../../../widgets/household_info_sheet.dart';
@@ -23,11 +22,16 @@ class DriverHomeTab extends StatelessWidget {
           bottom: false,
           child: Column(
             children: [
-              _buildHeader(context, provider.currentUser?.fullName ?? 'Haydovchi'),
+              _buildHeader(
+                context,
+                provider.currentUser?.fullName ?? 'Haydovchi',
+              ),
               _buildSearchTrigger(context, households),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
                   child: HouseholdsMapPage(
                     onGetDirections: (h) {
                       showModalBottomSheet(
@@ -35,7 +39,9 @@ class DriverHomeTab extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         builder: (_) => NavOptionsSheet(
                           household: h,
-                          targetResident: h.residents.isNotEmpty ? h.residents.first : null,
+                          targetResident: h.residents.isNotEmpty
+                              ? h.residents.first
+                              : null,
                         ),
                       );
                     },
@@ -56,7 +62,8 @@ class DriverHomeTab extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: AppColors.govNavy.withValues(alpha: 0.1),
               shape: BoxShape.circle,
@@ -70,12 +77,17 @@ class DriverHomeTab extends StatelessWidget {
               children: [
                 const Text(
                   'Xush kelibsiz',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 Text(
                   name,
                   style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.govNavy,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.govNavy,
                   ),
                 ),
               ],
@@ -93,13 +105,17 @@ class DriverHomeTab extends StatelessWidget {
             label: const Text(
               'Chiqish',
               style: TextStyle(
-                color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 12,
+                color: AppColors.danger,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
               ),
             ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               backgroundColor: AppColors.danger.withValues(alpha: 0.05),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
@@ -107,7 +123,10 @@ class DriverHomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchTrigger(BuildContext context, List<HouseholdModel> households) {
+  Widget _buildSearchTrigger(
+    BuildContext context,
+    List<HouseholdModel> households,
+  ) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -124,7 +143,9 @@ class DriverHomeTab extends StatelessWidget {
                   backgroundColor: Colors.transparent,
                   builder: (_) => NavOptionsSheet(
                     household: h,
-                    targetResident: r ?? (h.residents.isNotEmpty ? h.residents.first : null),
+                    targetResident:
+                        r ??
+                        (h.residents.isNotEmpty ? h.residents.first : null),
                   ),
                 );
               },
@@ -138,7 +159,9 @@ class DriverHomeTab extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       builder: (_) => NavOptionsSheet(
                         household: h,
-                        targetResident: h.residents.isNotEmpty ? h.residents.first : null,
+                        targetResident: h.residents.isNotEmpty
+                            ? h.residents.first
+                            : null,
                       ),
                     );
                   },

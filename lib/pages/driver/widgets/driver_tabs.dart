@@ -57,6 +57,7 @@ class _DriverListsTabState extends State<DriverListsTab> {
   Future<void> _load() async {
     final p = Provider.of<AppProvider>(context, listen: false);
     await p.fetchHouseholds();
+    if (!mounted) return;
     setState(() => _all = p.households);
   }
 
