@@ -58,8 +58,8 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('uz'), Locale('en'), Locale('ru')],
-      home: const MapPerimeterTool(),
-      // home: const AuthWrapper(),
+      // home: const MapPerimeterTool(),
+      home: const AuthWrapper(),
     );
   }
 }

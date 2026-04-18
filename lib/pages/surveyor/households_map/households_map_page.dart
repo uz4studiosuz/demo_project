@@ -207,24 +207,31 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                   },
                 ),
                 children: [
-                  TileLayer(
+                   TileLayer(
                     urlTemplate:
                         'https://mt1.google.com/vt/lyrs=${viewModel.mapType}&hl=uz&x={x}&y={y}&z={z}',
                     userAgentPackageName: 'com.example.demoproject',
                     maxZoom: 20,
+                    // FAQAT FARG'ONA HUDUDINI YUKLASH
+                    tileBounds: getFerganaBounds(),
                     tileProvider: CachedTileProvider(
-                      // Max 30 days cache, stored in temp/map_tiles_cache
                       store: FileCacheStore(
                         "${Directory.systemTemp.path}/map_tiles_cache",
                       ),
                     ),
                   ),
+                  
+                  // FARG'ONA TASHQARISINI YOPISH (MASKA)
+                  PolygonLayer(
+                    polygons: [getInvertedFerganaMask()],
+                  ),
+
                   if (kShowMapBorder)
                     PolylineLayer(
                       polylines: [
                         Polyline(
                           points: kFerganaBorder,
-                          color: Colors.redAccent.withValues(alpha: 0.5),
+                          color: Colors.redAccent.withValues(alpha: 0.6),
                           strokeWidth: 3,
                         ),
                       ],

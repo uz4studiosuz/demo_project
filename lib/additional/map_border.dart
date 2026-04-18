@@ -171,3 +171,27 @@ void constrainMap(MapCamera camera, MapController mapController) {
     });
   }
 }
+
+/// Farg'ona chegarasining to'rtburchak (Bounds) ko'rinishi
+LatLngBounds getFerganaBounds() {
+  return LatLngBounds.fromPoints(kFerganaBorder);
+}
+
+/// Xarita atrofini (Farg'onadan tashqarini) yopib turuvchi maska (Inverted Polygon)
+Polygon getInvertedFerganaMask() {
+  // Dunyoning to'rt burchagi (Tashqi ramka)
+  final worldCoords = [
+    const LatLng(90, -180),
+    const LatLng(90, 180),
+    const LatLng(-90, 180),
+    const LatLng(-90, -180),
+  ];
+
+  return Polygon(
+    points: worldCoords, // Butun dunyoni bo'yash
+    holePointsList: [kFerganaBorder], // Farg'onani "teshik" qilib qoldirish
+    color: const Color(0xFFF5F6F8).withValues(alpha: 0.95), // Tashqi rang
+    borderColor: Colors.red.withValues(alpha: 0.5),
+    borderStrokeWidth: 2,
+  );
+}
