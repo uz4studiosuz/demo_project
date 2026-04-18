@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../../providers/app_provider.dart';
 import '../../theme/colors.dart';
-import 'patient_list_page.dart';
+import 'patient_list/patient_list_page.dart';
 import 'widgets/surveyor_home_tab.dart';
-import 'widgets/households_map_page.dart';
+import 'households_map/households_map_page.dart';
 import 'widgets/surveyor_profile_tab.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════

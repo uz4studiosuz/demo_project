@@ -1,34 +1,26 @@
-import 'package:beemor/l10n/app_localizations.dart';
-import 'package:beemor/models/user_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:provider/provider.dart';
-import '../theme/colors.dart';
-import '../utils/locale_provider.dart';
+import '../../l10n/app_localizations.dart';
+import '../../theme/colors.dart';
+import '../../utils/locale_provider.dart';
+import '../../providers/app_provider.dart';
+import 'login_view_model.dart';
 
-import '../providers/app_provider.dart';
-import 'surveyor/surveyor_dashboard.dart';
-import 'driver/driver_dashboard.dart';
-
-class LoginPage extends StatefulWidget {
+class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LoginViewModel(),
+      child: const _LoginView(),
+    );
+  }
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _rememberMe = false;
-  bool _obscurePassword = true;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+class _LoginView extends StatelessWidget {
+  const _LoginView();
 
   void _showLanguageSelector(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -68,24 +60,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildLanguageOption(
-                'O\'zbekcha',
-                const Locale('uz'),
-                provider,
-                context,
-              ),
-              _buildLanguageOption(
-                'English',
-                const Locale('en'),
-                provider,
-                context,
-              ),
-              _buildLanguageOption(
-                'Русский',
-                const Locale('ru'),
-                provider,
-                context,
-              ),
+              _buildLanguageOption('O\'zbekcha', const Locale('uz'), provider, context),
+              _buildLanguageOption('English', const Locale('en'), provider, context),
+              _buildLanguageOption('Русский', const Locale('ru'), provider, context),
               const SizedBox(height: 16),
             ],
           ),
@@ -144,7 +121,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<LocaleProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final viewModel = context.watch<LoginViewModel>();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -167,9 +145,9 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: () => _showLanguageSelector(context),
                           icon: const Icon(TablerIcons.language, size: 20),
                           label: Text(
-                            provider.locale.languageCode == 'en'
+                            localeProvider.locale.languageCode == 'en'
                                 ? 'EN'
-                                : provider.locale.languageCode == 'uz'
+                                : localeProvider.locale.languageCode == 'uz'
                                 ? 'UZ'
                                 : 'RU',
                             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -238,20 +216,18 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Input Fields
                       _buildTextField(
-                        controller: _emailController,
+                        controller: viewModel.emailController,
                         hint: 'Foydalanuvchi nomi',
                         icon: TablerIcons.user,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
-                        controller: _passwordController,
+                        controller: viewModel.passwordController,
                         hint: 'Parol',
                         icon: TablerIcons.lock,
                         isPassword: true,
-                        obscure: _obscurePassword,
-                        onTogglePassword: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
+                        obscure: viewModel.obscurePassword,
+                        onTogglePassword: viewModel.togglePasswordVisibility,
                       ),
 
                       const SizedBox(height: 16),
@@ -261,15 +237,14 @@ class _LoginPageState extends State<LoginPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           GestureDetector(
-                            onTap: () =>
-                                setState(() => _rememberMe = !_rememberMe),
+                            onTap: viewModel.toggleRememberMe,
                             child: Row(
                               children: [
                                 Icon(
-                                  _rememberMe
+                                  viewModel.rememberMe
                                       ? TablerIcons.square_check_filled
                                       : TablerIcons.square,
-                                  color: _rememberMe
+                                  color: viewModel.rememberMe
                                       ? AppColors.primary
                                       : AppColors.textSecondary,
                                   size: 20,
@@ -279,10 +254,10 @@ class _LoginPageState extends State<LoginPage> {
                                   'Eslab qolish',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _rememberMe
+                                    color: viewModel.rememberMe
                                         ? AppColors.textMain
                                         : AppColors.textSecondary,
-                                    fontWeight: _rememberMe
+                                    fontWeight: viewModel.rememberMe
                                         ? FontWeight.w600
                                         : FontWeight.w400,
                                   ),
@@ -308,38 +283,23 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Login Button
                       Consumer<AppProvider>(
-                        builder: (context, provider, child) {
+                        builder: (context, appProvider, _) {
                           return Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
-                                if (!provider.isLoading)
+                                if (!appProvider.isLoading)
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.3,
-                                    ),
+                                    color: AppColors.primary.withValues(alpha: 0.3),
                                     blurRadius: 20,
                                     offset: const Offset(0, 8),
                                   ),
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: provider.isLoading
+                              onPressed: appProvider.isLoading
                                   ? null
-                                  : () async {
-                                      bool success = await provider.login(
-                                        _emailController.text,
-                                        _passwordController.text,
-                                      );
-
-                                      if (!context.mounted) return;
-
-                                      if (success) {
-                                        _navigateToDashboard(provider);
-                                      } else {
-                                        _showError(context);
-                                      }
-                                    },
+                                  : () => viewModel.handleLogin(context),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
@@ -349,7 +309,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 elevation: 0,
                               ),
-                              child: provider.isLoading
+                              child: appProvider.isLoading
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
@@ -376,6 +336,7 @@ class _LoginPageState extends State<LoginPage> {
                           Expanded(
                             child: _buildQuickLoginBtn(
                               context: context,
+                              viewModel: viewModel,
                               label: 'Xatlovchi',
                               username: 'surveyor1',
                               password: '1234',
@@ -388,6 +349,7 @@ class _LoginPageState extends State<LoginPage> {
                           Expanded(
                             child: _buildQuickLoginBtn(
                               context: context,
+                              viewModel: viewModel,
                               label: 'Haydovchi',
                               username: 'driver1',
                               password: '1234',
@@ -482,40 +444,9 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _navigateToDashboard(AppProvider provider) {
-    Widget next;
-    if (provider.currentUserRole == UserRole.surveyor) {
-      next = const SurveyorDashboard();
-    } else {
-      next = const DriverDashboard();
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => next),
-    );
-  }
-
-  void _showError(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(TablerIcons.alert_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Text('Login yoki parol xato.'),
-          ],
-        ),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.all(24),
-      ),
-    );
-  }
-
   Widget _buildQuickLoginBtn({
     required BuildContext context,
+    required LoginViewModel viewModel,
     required String label,
     required String username,
     required String password,
@@ -524,19 +455,7 @@ class _LoginPageState extends State<LoginPage> {
     required Color iconColor,
   }) {
     return InkWell(
-      onTap: () async {
-        _emailController.text = username;
-        _passwordController.text = password;
-        final provider = Provider.of<AppProvider>(context, listen: false);
-        bool success = await provider.login(username, password);
-        if (context.mounted) {
-          if (success) {
-            _navigateToDashboard(provider);
-          } else {
-            _showError(context);
-          }
-        }
-      },
+      onTap: () => viewModel.handleLogin(context, username: username, password: password),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),

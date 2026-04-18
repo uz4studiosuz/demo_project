@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:liquid_glass_bar/liquid_glass_bar.dart';
 import '../../theme/colors.dart';
 import 'widgets/driver_tabs.dart';
+import 'widgets/driver_home_tab.dart'; // import newly added home tab
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  DRIVER DASHBOARD  — Shell (bottom nav + indexed stack)
-//  Tab 0: DriverHomeTab
-//  Tab 1: DriverSettingsTab
-//  Tab 2: DriverProfileTab
+//  Tab 0: DriverHomeTab (Map + Search)
+//  Tab 1: DriverListsTab (Grids / Drill-down)
+//  Tab 2: DriverSettingsTab
+//  Tab 3: DriverProfileTab
 // ═══════════════════════════════════════════════════════════════════════════
 
 class DriverDashboard extends StatefulWidget {
@@ -25,6 +27,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   Widget build(BuildContext context) {
     const pages = [
       DriverHomeTab(),
+      DriverListsTab(),
       DriverSettingsTab(),
       DriverProfileTab(),
     ];
@@ -65,7 +68,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
         ),
       ),
       items: const [
-        LiquidGlassBarItem(iconData: Icons.search_rounded,         label: 'Qidiruv'),
+        LiquidGlassBarItem(iconData: Icons.map_outlined,           label: 'Asosiy'),
+        LiquidGlassBarItem(iconData: Icons.format_list_bulleted,   label: 'Ro\'yxatlar'),
         LiquidGlassBarItem(iconData: Icons.settings_outlined,      label: 'Sozlamalar'),
         LiquidGlassBarItem(iconData: Icons.person_outline_rounded, label: 'Profil'),
       ],

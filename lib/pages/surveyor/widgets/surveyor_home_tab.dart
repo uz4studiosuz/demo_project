@@ -6,7 +6,7 @@ import '../../../theme/colors.dart';
 import '../../../widgets/household_info_sheet.dart';
 import 'surveyor_household_actions.dart';
 import '../add_family_page.dart';
-import '../patient_list_page.dart';
+import '../patient_list/patient_list_page.dart';
 import 'household_list_card.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════

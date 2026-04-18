@@ -1,4 +1,4 @@
-import 'package:beemor/pages/login.dart';
+import 'package:beemor/pages/login/login_page.dart';
 import 'package:beemor/theme/app_theme.dart';
 import 'package:beemor/utils/locale_provider.dart';
 import 'package:flutter/material.dart';
