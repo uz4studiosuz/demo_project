@@ -9,8 +9,8 @@ class UserModel {
   final String lastName;
   final String? middleName;
   final String? phone;
-  final String username;
-  final UserRole role; // Bu enum DB dagiga mos bo'lishi kerak
+  final String username; 
+  final UserRole role; // Bu enum DB dagiga mos bo'lishi kerak 
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -45,8 +45,12 @@ class UserModel {
         orElse: () => UserRole.surveyor,
       ),
       isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
     );
   }
 
@@ -67,5 +71,6 @@ class UserModel {
     };
   }
 
-  String get fullName => '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
+  String get fullName =>
+      '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
 }
