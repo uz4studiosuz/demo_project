@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:remixicon/remixicon.dart';
 import '../../additional/map_border.dart';
 import '../../theme/colors.dart';
+import 'dart:io' show Directory;
 
 class FullScreenMapPicker extends StatefulWidget {
   final LatLng initialPosition;
@@ -100,11 +101,13 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                     'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
                 userAgentPackageName: 'com.example.demoproject',
                 maxZoom: 22,
-                tileProvider: CachedTileProvider(
-                  store: FileCacheStore(
-                    "${Directory.systemTemp.path}/map_tiles_cache",
-                  ),
-                ),
+                tileProvider: kIsWeb
+                    ? null
+                    : CachedTileProvider(
+                        store: FileCacheStore(
+                          "${Directory.systemTemp.path}/map_tiles_cache",
+                        ),
+                      ),
               ),
               if (kShowMapBorder)
                 PolylineLayer(

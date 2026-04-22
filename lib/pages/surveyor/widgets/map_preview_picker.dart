@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../theme/colors.dart';
 import '../../../additional/map_border.dart';
 import '../full_screen_map_picker.dart';
+import 'dart:io' show Directory;
 
 class MapPreviewPicker extends StatefulWidget {
   final LatLng initialPosition;
@@ -118,11 +119,13 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                           'https://mt1.google.com/vt/lyrs=y&hl=uz&x={x}&y={y}&z={z}',
                       userAgentPackageName: 'com.example.demoproject',
                       maxZoom: 20,
-                      tileProvider: CachedTileProvider(
-                        store: FileCacheStore(
-                          "${Directory.systemTemp.path}/map_tiles_cache",
-                        ),
-                      ),
+                      tileProvider: kIsWeb
+                          ? null
+                          : CachedTileProvider(
+                              store: FileCacheStore(
+                                "${Directory.systemTemp.path}/map_tiles_cache",
+                              ),
+                            ),
                     ),
                     if (kShowMapBorder)
                       PolylineLayer(

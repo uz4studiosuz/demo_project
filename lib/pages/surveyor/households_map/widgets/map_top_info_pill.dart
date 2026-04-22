@@ -37,32 +37,23 @@ class MapTopInfoPill extends StatelessWidget {
             ),
             child: Row(
               children: [
-                if (focusHousehold != null) ...[
-                  GestureDetector(
-                    onTap: onBack,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: AppColors.govNavy.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.govNavy,
-                        size: 16,
-                      ),
+                GestureDetector(
+                  onTap: onBack,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.govNavy.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.govNavy,
+                      size: 16,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                ] else ...[
-                  const Icon(
-                    Icons.map_outlined,
-                    color: AppColors.govNavy,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                ],
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: focusHousehold != null
                       ? Column(

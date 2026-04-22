@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cache/flutter_map_cache.dart';
@@ -11,6 +11,7 @@ import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import 'households_map_view_model.dart';
+import 'dart:io' show Directory;
 
 // Widgets
 import 'widgets/map_layer_builder.dart';
@@ -210,11 +211,13 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                     maxZoom: 20,
                     // FAQAT FARG'ONA HUDUDINI YUKLASH
                     tileBounds: getFerganaBounds(),
-                    tileProvider: CachedTileProvider(
-                      store: FileCacheStore(
-                        "${Directory.systemTemp.path}/map_tiles_cache",
-                      ),
-                    ),
+                    tileProvider: kIsWeb
+                        ? null
+                        : CachedTileProvider(
+                            store: FileCacheStore(
+                              "${Directory.systemTemp.path}/map_tiles_cache",
+                            ),
+                          ),
                   ),
                   
                   // FARG'ONA TASHQARISINI YOPISH (MASKA)
