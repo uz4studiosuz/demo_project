@@ -41,8 +41,15 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isAuthenticated = false;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +67,16 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('uz'), Locale('en'), Locale('ru')],
-      home: const AuthWrapper(),
+      // home: const AuthWrapper(),
+      home: _isAuthenticated
+          ? const LiteDashboardPage()
+          : WebPincodePage(
+              onAuthenticated: () {
+                setState(() {
+                  _isAuthenticated = true;
+                });
+              },
+            ),
     );
   }
 }
