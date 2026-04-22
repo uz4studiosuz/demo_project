@@ -23,6 +23,7 @@ class LocationPickerSection extends StatefulWidget {
   final String? initialTuman;
   final String? initialMfy;
   final String? initialStreet;
+  final bool showFullAddress;
 
   const LocationPickerSection({
     super.key,
@@ -30,6 +31,7 @@ class LocationPickerSection extends StatefulWidget {
     this.initialTuman,
     this.initialMfy,
     this.initialStreet,
+    this.showFullAddress = true,
   });
 
   @override
@@ -168,38 +170,38 @@ class _LocationPickerSectionState extends State<LocationPickerSection> {
 
         const SizedBox(height: 16),
 
-        // ── To'liq rasmiy manzil (auto-generated) ─────────
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.govNavy.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.govNavy.withValues(alpha: 0.1)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.home_outlined, size: 18, color: AppColors.govNavy.withValues(alpha: 0.7)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'To\'liq rasmiy manzil',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _builtAddress,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textMain, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+        if (widget.showFullAddress)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.govNavy.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.govNavy.withValues(alpha: 0.1)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.home_outlined, size: 18, color: AppColors.govNavy.withValues(alpha: 0.7)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'To\'liq rasmiy manzil',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _builtAddress,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textMain, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

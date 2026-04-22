@@ -39,7 +39,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
   final _middleCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController(text: '+998 ');
   String _gender = 'MALE';
-  
+
   bool _saving = false;
 
   // ── Suggestion listlar ──────────────────────────────────────────
@@ -58,7 +58,6 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
       final prefs = await SharedPreferences.getInstance();
       if (mounted) {
         setState(() {
-          // Manzil va pozitsiyani saqlangan holatdan yuklash
           _propertyType = prefs.getString('tpl_property') ?? kHouse;
           _tuman = prefs.getString('tpl_tuman') ?? _tuman;
           _qfy = prefs.getString('tpl_qfy') ?? _qfy;
@@ -69,11 +68,10 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
             prefs.getDouble('tpl_lng') ?? _position.longitude,
           );
 
-          // Ism-familiya suggesterlar
           final loadedFirst = prefs.getStringList('tpl_first') ?? [];
           final loadedLast = prefs.getStringList('tpl_last') ?? [];
           final loadedMiddle = prefs.getStringList('tpl_middle') ?? [];
-          
+
           _cachedFirstNames = {
             ...NamesData.defaultFirstNames,
             ...loadedFirst,
@@ -136,25 +134,26 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
     }
 
     setState(() => _saving = true);
-    
+
     try {
       final provider = Provider.of<AppProvider>(context, listen: false);
 
-      // ── Duplicate Check ──
-      // Check if a household with the same location or address already exists
       final isDuplicate = provider.households.any((h) {
-        // Location check (exact match or very close)
-        final sameLocation = (h.latitude - _position.latitude).abs() < 0.0001 && 
-                            (h.longitude - _position.longitude).abs() < 0.0001;
-        
-        // Address check
+        final sameLocation =
+            (h.latitude - _position.latitude).abs() < 0.0001 &&
+            (h.longitude - _position.longitude).abs() < 0.0001;
+
         bool sameAddress = false;
-        if (h.tumanName == _tuman && h.mfyName == _mfy && h.streetName == _street) {
+        if (h.tumanName == _tuman &&
+            h.mfyName == _mfy &&
+            h.streetName == _street) {
           if (_propertyType == kHouse && h.propertyType == kHouse) {
             sameAddress = h.houseNumber == _houseCtrl.text.trim();
-          } else if (_propertyType == kApartment && h.propertyType == kApartment) {
-            sameAddress = h.buildingNumber == _buildingCtrl.text.trim() && 
-                          h.apartment == _apartmentCtrl.text.trim();
+          } else if (_propertyType == kApartment &&
+              h.propertyType == kApartment) {
+            sameAddress =
+                h.buildingNumber == _buildingCtrl.text.trim() &&
+                h.apartment == _apartmentCtrl.text.trim();
           }
         }
 
@@ -166,7 +165,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         _snack('Ushbu manzil yoki lokatsiyada xonadon allaqachon mavjud!');
         return;
       }
-      
+
       final household = HouseholdModel(
         id: 0,
         regionId: 1,
@@ -179,8 +178,12 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         mfyName: _mfy,
         streetName: _street,
         houseNumber: _propertyType == kHouse ? _houseCtrl.text.trim() : null,
-        buildingNumber: _propertyType == kApartment ? _buildingCtrl.text.trim() : null,
-        apartment: _propertyType == kApartment ? _apartmentCtrl.text.trim() : null,
+        buildingNumber: _propertyType == kApartment
+            ? _buildingCtrl.text.trim()
+            : null,
+        apartment: _propertyType == kApartment
+            ? _apartmentCtrl.text.trim()
+            : null,
         floor: int.tryParse(_floorCtrl.text.trim()),
         latitude: _position.latitude,
         longitude: _position.longitude,
@@ -193,8 +196,14 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         householdId: 0,
         firstName: first,
         lastName: last,
-        middleName: _middleCtrl.text.trim().isEmpty ? null : _middleCtrl.text.trim(),
-        phonePrimary: _phoneCtrl.text.trim() == '+998' ? null : _phoneCtrl.text.trim(),
+        middleName: _middleCtrl.text.trim().isEmpty
+            ? null
+            : _middleCtrl.text.trim(),
+        phonePrimary:
+            _phoneCtrl.text.trim() == '+998' ||
+                _phoneCtrl.text.trim() == '+998 '
+            ? null
+            : _phoneCtrl.text.trim(),
         role: 'Oila boshlig\'i',
         gender: _gender,
         createdAt: DateTime.now(),
@@ -206,7 +215,6 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
       if (mounted) {
         setState(() => _saving = false);
         if (ok) {
-          // Template larni saqlash
           try {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('tpl_property', _propertyType);
@@ -217,19 +225,21 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
             await prefs.setDouble('tpl_lat', _position.latitude);
             await prefs.setDouble('tpl_lng', _position.longitude);
 
-            final Set<String> fNames = prefs.getStringList('tpl_first')?.toSet() ?? {};
-            final Set<String> lNames = prefs.getStringList('tpl_last')?.toSet() ?? {};
-            final Set<String> mNames = prefs.getStringList('tpl_middle')?.toSet() ?? {};
-            
+            final Set<String> fNames =
+                prefs.getStringList('tpl_first')?.toSet() ?? {};
+            final Set<String> lNames =
+                prefs.getStringList('tpl_last')?.toSet() ?? {};
+            final Set<String> mNames =
+                prefs.getStringList('tpl_middle')?.toSet() ?? {};
+
             fNames.add(first);
             lNames.add(last);
             if (head.middleName != null) mNames.add(head.middleName!);
-            
+
             await prefs.setStringList('tpl_first', fNames.toList());
             await prefs.setStringList('tpl_last', lNames.toList());
             await prefs.setStringList('tpl_middle', mNames.toList());
-            
-            // Mahalliy suggesterlarni ham yangilash (sahifadan chiqmasdan keyingi kirish uchun)
+
             _loadTemplates();
           } catch (_) {}
 
@@ -252,8 +262,6 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
     _lastCtrl.clear();
     _middleCtrl.clear();
     _phoneCtrl.text = '+998 ';
-    // Izoh: Manzil va mulk turi tozalab tashlanmaydi, chunki user odatda bitta hududda ishlaydi.
-    // Pro versiyada ham shunday.
   }
 
   void _snack(String msg, {bool success = false}) {
@@ -279,7 +287,11 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -292,6 +304,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
               icon: Icons.location_on_outlined,
               title: 'Hudud ma\'lumotlari',
               child: LocationPickerSection(
+                showFullAddress: false,
                 onAddressChanged: (t, q, m, s, addr) {
                   setState(() {
                     _tuman = t;
@@ -454,9 +467,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
                 ],
               ),
             ),
-            
             const SizedBox(height: 24),
-            
             _buildSaveButton(),
             const SizedBox(height: 20),
           ],

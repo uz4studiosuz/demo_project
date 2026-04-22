@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/colors.dart';
 import 'lite_add_family_page.dart';
+import 'lite_record_list_page.dart';
 import '../../pages/surveyor/households_map/households_map_page.dart';
 
 class LiteDashboardPage extends StatefulWidget {
@@ -55,6 +56,19 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const LiteAddFamilyPage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildActionCard(
+                  title: 'Kiritilganlar ro\'yxati',
+                  subtitle: 'Barcha yozuvlarni ko\'rish',
+                  icon: Icons.list_alt_rounded,
+                  color: Colors.orange,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LiteRecordListPage(),
                     ),
                   ),
                 ),
