@@ -141,29 +141,70 @@ class _LoginView extends StatelessWidget {
                       // Language Switcher
                       Align(
                         alignment: Alignment.topRight,
-                        child: TextButton.icon(
-                          onPressed: () => _showLanguageSelector(context),
-                          icon: const Icon(TablerIcons.language, size: 20),
-                          label: Text(
-                            localeProvider.locale.languageCode == 'en'
-                                ? 'EN'
-                                : localeProvider.locale.languageCode == 'uz'
-                                ? 'UZ'
-                                : 'RU',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.textMain,
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Lite Mode Toggle
+                            Consumer<AppProvider>(
+                              builder: (context, provider, _) {
+                                return InkWell(
+                                  onTap: () => provider.setLiteMode(!provider.isLiteMode),
+                                  borderRadius: BorderRadius.circular(100),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: provider.isLiteMode ? AppColors.govNavy : Colors.white,
+                                      borderRadius: BorderRadius.circular(100),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          provider.isLiteMode ? Icons.bolt_rounded : Icons.bolt_outlined,
+                                          size: 18,
+                                          color: provider.isLiteMode ? Colors.white : AppColors.govNavy,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'LITE',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: provider.isLiteMode ? Colors.white : AppColors.govNavy,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(100),
-                              side: BorderSide(color: Colors.grey.shade200),
+                            const SizedBox(width: 8),
+                            TextButton.icon(
+                              onPressed: () => _showLanguageSelector(context),
+                              icon: const Icon(TablerIcons.language, size: 20),
+                              label: Text(
+                                localeProvider.locale.languageCode == 'en'
+                                    ? 'EN'
+                                    : localeProvider.locale.languageCode == 'uz'
+                                    ? 'UZ'
+                                    : 'RU',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textMain,
+                                backgroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                  side: BorderSide(color: Colors.grey.shade200),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
 

@@ -14,6 +14,14 @@ class AppProvider extends ChangeNotifier {
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
 
+  bool _isLiteMode = false;
+  bool get isLiteMode => _isLiteMode;
+
+  void setLiteMode(bool value) {
+    _isLiteMode = value;
+    notifyListeners();
+  }
+
   UserRole get currentUserRole => _currentUser?.role ?? UserRole.none;
 
   bool _isLoading = false;

@@ -14,6 +14,8 @@ import 'package:beemor/models/user_role.dart';
 import 'package:beemor/pages/surveyor/surveyor_dashboard.dart';
 import 'package:beemor/pages/driver/driver_dashboard.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:beemor/lite/lite_add_family_page.dart';
+import 'package:beemor/lite/lite_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +60,8 @@ class MyApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('uz'), Locale('en'), Locale('ru')],
       // home: const MapPerimeterTool(),
-      home: const AuthWrapper(),
+      home: const LiteDashboardPage(),
+      // home: const AuthWrapper(),
     );
   }
 }
@@ -97,7 +100,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    final user = context.watch<AppProvider>().currentUser;
+    final appProvider = context.watch<AppProvider>();
+    final user = appProvider.currentUser;
+
+    if (appProvider.isLiteMode) {
+      return const LiteDashboardPage();
+    }
+
     if (user == null) {
       return const LoginPage();
     }
