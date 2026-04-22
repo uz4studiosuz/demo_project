@@ -1,6 +1,5 @@
 import 'package:beemor/pages/login/login_page.dart';
 import 'package:beemor/theme/app_theme.dart';
-import 'package:beemor/tools/map_perimeter_tool.dart';
 import 'package:beemor/utils/locale_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

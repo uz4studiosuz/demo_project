@@ -4,7 +4,6 @@ import '../../models/household_model.dart';
 import '../../models/resident_model.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/uz_converter.dart';
-import '../../theme/colors.dart';
 
 const int kMinSearchLength = 2;
 const int kMaxSearchResults = 60;

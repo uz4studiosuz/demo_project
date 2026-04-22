@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
-import '../../../widgets/household_info_sheet.dart';
 import 'surveyor_household_actions.dart';
 import '../add_family_page.dart';
 import '../patient_list/patient_list_page.dart';

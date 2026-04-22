@@ -55,14 +55,10 @@ class _HouseholdsMapView extends StatefulWidget {
 
 class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
   final MapController _mapController = MapController();
-  late LatLng _currentPosition;
 
   @override
   void initState() {
     super.initState();
-    _currentPosition = widget.focusHousehold != null
-        ? LatLng(widget.focusHousehold!.latitude, widget.focusHousehold!.longitude)
-        : const LatLng(40.3864, 71.7825);
     
     // Ma'lumotlarni yuklashni ta'minlaymiz
     WidgetsBinding.instance.addPostFrameCallback((_) {
