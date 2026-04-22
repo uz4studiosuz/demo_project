@@ -1,3 +1,4 @@
+import 'package:beemor/pages/surveyor/patient_list/patient_list_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
@@ -68,7 +69,7 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LiteRecordListPage(),
+                      builder: (context) => const PatientListPage(),
                     ),
                   ),
                 ),
