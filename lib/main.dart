@@ -14,8 +14,9 @@ import 'package:beemor/models/user_role.dart';
 import 'package:beemor/pages/surveyor/surveyor_dashboard.dart';
 import 'package:beemor/pages/driver/driver_dashboard.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:beemor/lite/lite_add_family_page.dart';
 import 'package:beemor/lite/lite_dashboard.dart';
+import 'package:flutter/foundation.dart';
+import 'package:beemor/pages/login/web_pincode_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,9 +60,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('uz'), Locale('en'), Locale('ru')],
-      // home: const MapPerimeterTool(),
-      home: const LiteDashboardPage(),
-      // home: const AuthWrapper(),
+      home: const AuthWrapper(),
     );
   }
 }
@@ -75,6 +74,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isInit = false;
+  bool _isWebAuthenticated = false;
 
   @override
   void initState() {
@@ -97,6 +97,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
         body: Center(
           child: CircularProgressIndicator(color: AppColors.govNavy),
         ),
+      );
+    }
+
+    if (kIsWeb && !_isWebAuthenticated) {
+      return WebPincodePage(
+        onAuthenticated: () => setState(() => _isWebAuthenticated = true),
       );
     }
 
