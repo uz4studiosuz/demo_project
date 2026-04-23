@@ -11,7 +11,9 @@ import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import 'households_map_view_model.dart';
-import 'dart:io' if (dart.library.html) '../../../utils/io_stub.dart' show Directory;
+import 'dart:io'
+    if (dart.library.html) '../../../utils/io_stub.dart'
+    show Directory;
 
 // Widgets
 import 'widgets/map_layer_builder.dart';
@@ -181,8 +183,6 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
       builder: (context, provider, _) {
         final households = provider.households;
         final currentZoom = viewModel.currentZoom;
-        
-        debugPrint('🔵 [HouseholdsMapPage] Xonadonlar soni: ${households.length}');
 
         return Scaffold(
           body: Stack(
@@ -208,7 +208,7 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                   },
                 ),
                 children: [
-                   TileLayer(
+                  TileLayer(
                     urlTemplate:
                         'https://mt1.google.com/vt/lyrs=${viewModel.mapType}&hl=uz&x={x}&y={y}&z={z}',
                     userAgentPackageName: 'com.example.demoproject',
@@ -223,11 +223,9 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                             ),
                           ),
                   ),
-                  
+
                   // FARG'ONA TASHQARISINI YOPISH (MASKA)
-                  PolygonLayer(
-                    polygons: [getInvertedFerganaMask()],
-                  ),
+                  PolygonLayer(polygons: [getInvertedFerganaMask()]),
 
                   if (kShowMapBorder)
                     PolylineLayer(
