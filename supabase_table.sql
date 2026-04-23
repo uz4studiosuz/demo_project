@@ -117,6 +117,11 @@ INSERT INTO public.streets (neighborhood_id, name) VALUES
   (16, 'Yipak yo''li ko''chasi')
 ON CONFLICT DO NOTHING;
 
+-- ID hisoblagichlarini (Sequence) to'g'irlash (Qo'lda kiritilgan IDlar bilan konflikt bo'lmasligi uchun)
+SELECT setval('districts_id_seq', (SELECT MAX(id) FROM districts));
+SELECT setval('neighborhoods_id_seq', (SELECT MAX(id) FROM neighborhoods));
+SELECT setval('streets_id_seq', (SELECT MAX(id) FROM streets));
+
 -- 2. APP_USERS — Jadvallar
 CREATE TABLE public.app_users (
   id               BIGSERIAL PRIMARY KEY,
@@ -140,7 +145,9 @@ VALUES
   ('Ali',    'Valiyev',   'surveyor1', '1234', 'SURVEYOR', 1),
   ('Bobur',  'Toshmatov', 'surveyor2', '1234', 'SURVEYOR', 2),
   ('Jasur',  'Rahimov',   'driver1',   '1234', 'DRIVER', 1),
-  ('Dilnoza','Karimova',  'driver2',   '1234', 'DRIVER', 6);
+  ('Dilnoza','Karimova',  'driver2',   '1234', 'DRIVER', 6),
+  ('Usmoxan','Tadjibayev',  'superadmin',   '459775', 'ADMIN', 1)
+ON CONFLICT (username) DO NOTHING;
 
 -- 3. HOUSEHOLDS — Xonadonlar
 CREATE TABLE public.households (
@@ -204,9 +211,9 @@ ALTER TABLE public.households    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.residents     ENABLE ROW LEVEL SECURITY;
 
 -- Politikalar
-CREATE POLICY "allow_read_districts"     ON public.districts     FOR SELECT USING (true);
-CREATE POLICY "allow_read_neighborhoods" ON public.neighborhoods FOR SELECT USING (true);
-CREATE POLICY "allow_read_streets"       ON public.streets       FOR SELECT USING (true);
+CREATE POLICY "allow_all_districts"     ON public.districts     FOR ALL    USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_neighborhoods" ON public.neighborhoods FOR ALL    USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_streets"       ON public.streets       FOR ALL    USING (true) WITH CHECK (true);
 CREATE POLICY "allow_read_app_users"     ON public.app_users     FOR SELECT USING (true);
 CREATE POLICY "allow_all_households"     ON public.households    FOR ALL    USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_residents"      ON public.residents     FOR ALL    USING (true) WITH CHECK (true);
