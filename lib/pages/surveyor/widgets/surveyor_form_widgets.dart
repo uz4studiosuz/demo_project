@@ -307,6 +307,7 @@ class _SuggestionField extends StatefulWidget {
 }
 
 class _SuggestionFieldState extends State<_SuggestionField> {
+  final LayerLink _layerLink = LayerLink();
   final FocusNode _focusNode = FocusNode();
 
   @override
@@ -334,46 +335,50 @@ class _SuggestionFieldState extends State<_SuggestionField> {
         return matches;
       },
       optionsViewBuilder: (context, onSelected, options) {
-        // CompositedTransformFollower ishlatilmaydi — u hit-test maydonini
-        // vizual pozitsiyadan ajratib qo'yar edi (tanlash imkonsiz bo'lardi).
-        // RawAutocomplete ning standart overlay pozitsiyalashi ishlatiladi.
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 8.0,
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: 200,
-                  maxWidth: widget.constraints.maxWidth,
+        return CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          followerAnchor: Alignment.topLeft,
+          targetAnchor: Alignment.bottomLeft,
+          offset: const Offset(0, 4),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8.0,
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              child: Container(
+                width: widget.constraints.maxWidth,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: Color(0xFFF5F6F8)),
-                  itemBuilder: (BuildContext context, int index) {
-                    final String option = options.elementAt(index);
-                    return InkWell(
-                      onTap: () {
-                        onSelected(option);
-                        FocusScope.of(context).unfocus();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14.0, vertical: 12.0),
-                        child:
-                            Text(option, style: const TextStyle(fontSize: 14)),
-                      ),
-                    );
-                  },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 200,
+                  ),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: Color(0xFFF5F6F8)),
+                    itemBuilder: (BuildContext context, int index) {
+                      final String option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () {
+                          onSelected(option);
+                          FocusScope.of(context).unfocus();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14.0, vertical: 12.0),
+                          child: Text(option,
+                              style: const TextStyle(fontSize: 14)),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -381,15 +386,18 @@ class _SuggestionFieldState extends State<_SuggestionField> {
         );
       },
       fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-        return SurveyorFormWidgets._buildTextFormField(
-          textEditingController,
-          widget.label,
-          widget.required,
-          widget.icon,
-          widget.keyboard,
-          focusNode: focusNode,
-          onFieldSubmitted: (v) => onFieldSubmitted(),
-          inputFormatters: widget.inputFormatters,
+        return CompositedTransformTarget(
+          link: _layerLink,
+          child: SurveyorFormWidgets._buildTextFormField(
+            textEditingController,
+            widget.label,
+            widget.required,
+            widget.icon,
+            widget.keyboard,
+            focusNode: focusNode,
+            onFieldSubmitted: (v) => onFieldSubmitted(),
+            inputFormatters: widget.inputFormatters,
+          ),
         );
       },
     );
