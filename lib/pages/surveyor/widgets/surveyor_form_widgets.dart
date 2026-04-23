@@ -72,6 +72,8 @@ class SurveyorFormWidgets {
           keyboardType: keyboardType,
           onChanged: onChanged,
           readOnly: readOnly,
+          maxLength: keyboardType == TextInputType.phone ? 13 : null,
+          buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
           style: TextStyle(
             fontSize: 14,
             color: readOnly ? AppColors.textSecondary : AppColors.textMain,
@@ -120,70 +122,14 @@ class SurveyorFormWidgets {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => RawAutocomplete<String>(
-        textEditingController: ctrl,
-        focusNode: FocusNode(),
-        optionsBuilder: (TextEditingValue textEditingValue) {
-          if (textEditingValue.text.isEmpty) {
-            return const Iterable<String>.empty();
-          }
-          final q = textEditingValue.text.toLowerCase();
-          final matches = suggestions.where((s) => s.toLowerCase().startsWith(q));
-          
-          // Agar kiritilgan matn birontasi bilan aynan mos kelsa va yagona bosa popupni yopamiz
-          if (matches.length == 1 && matches.first.toLowerCase() == q) {
-            return const Iterable<String>.empty();
-          }
-          
-          return matches;
-        },
-        optionsViewBuilder: (context, onSelected, options) {
-          return Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(10),
-              color: Colors.white,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: 200,
-                  maxWidth: constraints.maxWidth,
-                ),
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF5F6F8)),
-                  itemBuilder: (BuildContext context, int index) {
-                    final String option = options.elementAt(index);
-                    return InkWell(
-                      onTap: () {
-                        onSelected(option);
-                        // Tanlangandan so'ng fokusni yo'qotish orqali popupni qayta ochilishini oldini olamiz
-                        FocusScope.of(context).unfocus();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-                        child: Text(option, style: const TextStyle(fontSize: 14)),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        },
-        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-          return _buildTextFormField(
-            textEditingController,
-            label,
-            required,
-            icon,
-            keyboard,
-            focusNode: focusNode,
-            onFieldSubmitted: (v) => onFieldSubmitted(),
-          );
-        },
+      builder: (context, constraints) => _SuggestionField(
+        ctrl: ctrl,
+        label: label,
+        required: required,
+        icon: icon,
+        keyboard: keyboard,
+        suggestions: suggestions,
+        constraints: constraints,
       ),
     );
   }
@@ -205,6 +151,8 @@ class SurveyorFormWidgets {
           focusNode: focusNode,
           keyboardType: keyboard,
           onFieldSubmitted: onFieldSubmitted,
+          maxLength: keyboard == TextInputType.phone ? 13 : null,
+          buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
           style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             labelText: label + (required ? ' *' : ''),
@@ -320,6 +268,116 @@ class SurveyorFormWidgets {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SuggestionField extends StatefulWidget {
+  final TextEditingController ctrl;
+  final String label;
+  final bool required;
+  final IconData? icon;
+  final TextInputType keyboard;
+  final List<String> suggestions;
+  final BoxConstraints constraints;
+
+  const _SuggestionField({
+    required this.ctrl,
+    required this.label,
+    required this.required,
+    this.icon,
+    required this.keyboard,
+    required this.suggestions,
+    required this.constraints,
+  });
+
+  @override
+  State<_SuggestionField> createState() => _SuggestionFieldState();
+}
+
+class _SuggestionFieldState extends State<_SuggestionField> {
+  final LayerLink _layerLink = LayerLink();
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<String>(
+      textEditingController: widget.ctrl,
+      focusNode: FocusNode(),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty) {
+          return const Iterable<String>.empty();
+        }
+        final q = textEditingValue.text.toLowerCase();
+        final matches = widget.suggestions.where((s) => s.toLowerCase().startsWith(q));
+
+        if (matches.length == 1 && matches.first.toLowerCase() == q) {
+          return const Iterable<String>.empty();
+        }
+
+        return matches;
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          followerAnchor: Alignment.bottomLeft,
+          targetAnchor: Alignment.topLeft,
+          offset: const Offset(0, -8),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: Material(
+              elevation: 8.0,
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: 200,
+                    maxWidth: widget.constraints.maxWidth,
+                  ),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF5F6F8)),
+                    itemBuilder: (BuildContext context, int index) {
+                      final String option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () {
+                          onSelected(option);
+                          FocusScope.of(context).unfocus();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+                          child: Text(option, style: const TextStyle(fontSize: 14)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+        return CompositedTransformTarget(
+          link: _layerLink,
+          child: SurveyorFormWidgets._buildTextFormField(
+            textEditingController,
+            widget.label,
+            widget.required,
+            widget.icon,
+            widget.keyboard,
+            focusNode: focusNode,
+            onFieldSubmitted: (v) => onFieldSubmitted(),
+          ),
+        );
+      },
     );
   }
 }

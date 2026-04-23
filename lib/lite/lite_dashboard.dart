@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/colors.dart';
 import 'lite_add_family_page.dart';
-import 'lite_record_list_page.dart';
 import '../../pages/surveyor/households_map/households_map_page.dart';
+import '../../pages/surveyor/statistics_page.dart';
 
 class LiteDashboardPage extends StatefulWidget {
   const LiteDashboardPage({super.key});
@@ -34,6 +34,17 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
         ),
         backgroundColor: AppColors.govNavy,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
+            tooltip: 'Statistika',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const StatisticsPage()),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Consumer<AppProvider>(
         builder: (context, provider, child) {
@@ -46,7 +57,7 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
               children: [
                 _buildWelcomeHeader(provider),
                 const SizedBox(height: 24),
-                _buildStatsCard(count),
+                _buildStatsCard(count, provider.isLoading),
                 const SizedBox(height: 32),
                 _buildActionCard(
                   title: 'Yangi xatlov qo\'shish',
@@ -69,7 +80,8 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PatientListPage(),
+                      builder: (context) =>
+                          const PatientListPage(isEmbedded: true),
                     ),
                   ),
                 ),
@@ -103,7 +115,7 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
           style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
         ),
         Text(
-          provider.currentUser?.fullName ?? 'Foydalanuvchi',
+          provider.currentUser?.fullName ?? 'Xatlovchi',
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -114,7 +126,7 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
     );
   }
 
-  Widget _buildStatsCard(int count) {
+  Widget _buildStatsCard(int count, bool isLoading) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -125,41 +137,44 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.govNavy.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Kiritilgan honadonlar',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
+      child: isLoading
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: CircularProgressIndicator(
+                  color: Colors.white70,
+                  strokeWidth: 3,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'ta xonadon',
-                style: TextStyle(color: Colors.white60, fontSize: 18),
-              ),
-            ],
-          ),
-        ],
-      ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Kiritilgan honadonlar',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'ta xonadon',
+                      style: TextStyle(color: Colors.white60, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 
@@ -178,13 +193,7 @@ class _LiteDashboardPageState extends State<LiteDashboardPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(color: Colors.grey.shade200, width: 1),
         ),
         child: Row(
           children: [

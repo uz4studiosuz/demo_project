@@ -61,6 +61,7 @@ dependencies:
   dio: ^5.7.0
   dio_cache_interceptor: ^4.0.6
   http_cache_file_store: ^2.0.1
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

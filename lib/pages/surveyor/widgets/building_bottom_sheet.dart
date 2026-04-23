@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../models/household_model.dart';
 import '../../../theme/colors.dart';
@@ -104,6 +105,14 @@ class BuildingBottomSheet {
                     ],
                   ),
                 ),
+                if (kIsWeb)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
               ],
             ),
             const SizedBox(height: 16),

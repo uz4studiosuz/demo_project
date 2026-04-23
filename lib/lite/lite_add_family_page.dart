@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
@@ -40,6 +41,9 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
   final _phoneCtrl = TextEditingController(text: '+998 ');
   String _gender = 'MALE';
 
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollTop = false;
+
   bool _saving = false;
 
   // ── Suggestion listlar ──────────────────────────────────────────
@@ -51,6 +55,13 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
   void initState() {
     super.initState();
     _loadTemplates();
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 300 && !_showScrollTop) {
+        setState(() => _showScrollTop = true);
+      } else if (_scrollController.offset <= 300 && _showScrollTop) {
+        setState(() => _showScrollTop = false);
+      }
+    });
   }
 
   Future<void> _loadTemplates() async {
@@ -99,6 +110,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
     _lastCtrl.dispose();
     _middleCtrl.dispose();
     _phoneCtrl.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -278,6 +290,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: _buildFloatingActionButton(),
       appBar: AppBar(
         title: const Text(
           'Tezkor xatlov (Lite)',
@@ -296,6 +309,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         ),
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -589,6 +603,24 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
                 ],
               ),
       ),
+    );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    if (!kIsWeb) return null;
+    if (!_showScrollTop) return null;
+
+    return FloatingActionButton(
+      mini: true,
+      backgroundColor: AppColors.govNavy,
+      onPressed: () {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      },
+      child: const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white),
     );
   }
 }

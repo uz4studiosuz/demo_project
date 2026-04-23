@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/household_model.dart';
 import '../models/resident_model.dart';
@@ -98,7 +99,23 @@ class _HouseholdInfoSheet extends StatelessWidget {
           ),
 
           // ── Header card
-          _HeaderCard(household: h, isApt: isApt),
+          Stack(
+            children: [
+              _HeaderCard(household: h, isApt: isApt),
+              if (kIsWeb)
+                Positioned(
+                  top: 12,
+                  right: 20,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+            ],
+          ),
 
           // ── Residents list
           Flexible(

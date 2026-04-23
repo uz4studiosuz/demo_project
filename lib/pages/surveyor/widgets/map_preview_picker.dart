@@ -139,12 +139,7 @@ class _MapPreviewPickerState extends State<MapPreviewPicker> {
                       ),
                   ],
                 ),
-                GestureDetector(
-                  // Xaritaga tekkanda ham to'liq ekranni ochib yuborish
-                  onTap: _openFullScreenMap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(color: Colors.transparent),
-                ),
+                // GestureDetector olib tashlandi (faqat button orqali kiriladi)
                 Center(
                   child: Container(
                     width: 15,

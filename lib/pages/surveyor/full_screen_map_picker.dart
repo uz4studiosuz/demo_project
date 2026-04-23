@@ -56,7 +56,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
 
       setState(() {
         _currentPosition = newLatLng;
-        _mapController.move(newLatLng, 17);
+        _mapController.move(newLatLng, 20);
       });
     } catch (e) {
       if (mounted) {
@@ -148,7 +148,7 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Haritani maksimal yaqinlashtirib, o\'rtadagi qizil nuqtani xonadon ustiga aniq olib keling va joylashuvni tasdiqlang. (Xonadon manzili aniq belgilanganiga ishonch hosil qiling)',
+                      'Xaritani maksimal yaqinlashtirib, o\'rtadagi qizil nuqtani xonadon ustiga aniq olib keling va joylashuvni tasdiqlang. (Xonadon manzili aniq belgilanganiga ishonch hosil qiling)',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -164,16 +164,25 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
           Positioned(
             right: 16,
             bottom: 100,
-            child: FloatingActionButton(
+            child: FloatingActionButton.extended(
               heroTag: 'my_location_btn_full',
               onPressed: _isLoading ? null : _getCurrentLocation,
               backgroundColor: Colors.white,
-              child: _isLoading
+              label: _isLoading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
+                  : const Text(
+                      'Mening joylashuvim',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+              icon: _isLoading
+                  ? null
                   : const Icon(Icons.my_location, color: AppColors.primary),
             ),
           ),
@@ -181,24 +190,25 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
             bottom: 30,
             left: 20,
             right: 20,
-            child: ElevatedButton(
+            child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(55),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 8,
-                shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                shadowColor: AppColors.success.withValues(alpha: 0.3),
               ),
               onPressed: () {
                 Navigator.pop(context, _currentPosition);
               },
-              child: const Text(
+              label: const Text(
                 'Joylashuvni tasdiqlash',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              icon: const Icon(Icons.check_rounded),
             ),
           ),
         ],

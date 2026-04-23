@@ -269,7 +269,7 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
                 : () async {
                     final latLng = await viewModel.getMyLocation(context);
                     if (latLng != null) {
-                      _mapController.move(latLng, 15.0);
+                      _mapController.move(latLng, 18.0);
                     }
                   },
           ),
