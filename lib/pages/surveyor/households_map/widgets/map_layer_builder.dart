@@ -85,8 +85,8 @@ List<Marker> buildMapMarkers({
     final isFocused = focusHousehold?.id == h.id;
     markers.add(Marker(
       point: LatLng(h.latitude, h.longitude),
-      width: isFocused ? 120 : 100,
-      height: isFocused ? 66 : 54,
+      width: 44,
+      height: 44,
       child: GestureDetector(
         onTap: () {
           showHouseholdInfoSheet(
@@ -122,33 +122,28 @@ List<Marker> buildMapMarkers({
             },
           );
         },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: isFocused ? const Color(0xFFD32F2F) : AppColors.govNavy,
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: isFocused ? [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 8)] : [],
+        child: Container(
+          decoration: BoxDecoration(
+            color: isFocused ? Colors.red : Colors.blue.shade700,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              child: Text(
-                h.houseNumber ?? "?",
-                style: TextStyle(color: Colors.white, fontSize: isFocused ? 11 : 9, fontWeight: FontWeight.bold),
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            h.houseNumber ?? "?",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isFocused ? const Color(0xFFD32F2F) : AppColors.govNavy,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: Icon(Icons.home_rounded, color: Colors.white, size: isFocused ? 20 : 16),
-            ),
-          ],
+          ),
         ),
       ),
     ));
@@ -161,12 +156,11 @@ List<Marker> buildMapMarkers({
      final point = LatLng(first.latitude, first.longitude);
      final isFocused = apartments.any((a) => a.id == focusHousehold?.id);
      final buildingNum = first.buildingNumber ?? '?';
-     final aptCount = apartments.length;
 
      markers.add(Marker(
        point: point,
-       width: 140,
-       height: 70,
+       width: 48,
+       height: 48,
        child: GestureDetector(
          onTap: () {
            BuildingBottomSheet.show(
@@ -185,42 +179,28 @@ List<Marker> buildMapMarkers({
              },
            );
          },
-         child: Column(
-           mainAxisSize: MainAxisSize.min,
-           children: [
-             Container(
-               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-               decoration: BoxDecoration(
-                 color: isFocused ? const Color(0xFF6A1B9A) : const Color(0xFF37474F),
-                 borderRadius: BorderRadius.circular(8),
-                 boxShadow: isFocused ? [BoxShadow(color: Colors.purple.withValues(alpha: 0.4), blurRadius: 10)] : [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4)],
+         child: Container(
+           decoration: BoxDecoration(
+             color: isFocused ? Colors.purple : Colors.red.shade700,
+             shape: BoxShape.circle,
+             border: Border.all(color: Colors.white, width: 2),
+             boxShadow: [
+               BoxShadow(
+                 color: Colors.black.withValues(alpha: 0.2),
+                 blurRadius: 4,
+                 offset: const Offset(0, 2),
                ),
-               child: Row(
-                 mainAxisSize: MainAxisSize.min,
-                 children: [
-                   const Icon(Icons.apartment, color: Colors.white, size: 12),
-                   const SizedBox(width: 3),
-                   Flexible(
-                     child: Text(
-                       '${first.streetName ?? ""}${first.streetName != null ? " " : ""}$buildingNum-b • $aptCount kv',
-                       style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                       maxLines: 1, overflow: TextOverflow.ellipsis,
-                     ),
-                   ),
-                 ],
-               ),
+             ],
+           ),
+           alignment: Alignment.center,
+           child: Text(
+             buildingNum,
+             style: const TextStyle(
+               color: Colors.white,
+               fontSize: 13,
+               fontWeight: FontWeight.bold,
              ),
-             const SizedBox(height: 2),
-             Container(
-               padding: const EdgeInsets.all(4),
-               decoration: BoxDecoration(
-                 color: isFocused ? const Color(0xFF6A1B9A) : const Color(0xFF37474F),
-                 shape: BoxShape.circle,
-                 border: Border.all(color: Colors.white, width: 1.5),
-               ),
-               child: const Icon(Icons.location_city_rounded, color: Colors.white, size: 18),
-             ),
-           ],
+           ),
          ),
        ),
      ));

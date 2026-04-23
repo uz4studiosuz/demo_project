@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,7 +39,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
   final _firstCtrl = TextEditingController();
   final _lastCtrl = TextEditingController();
   final _middleCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController(text: '+998 ');
+  final _phoneCtrl = TextEditingController(text: '+998');
   String _gender = 'MALE';
 
   final ScrollController _scrollController = ScrollController();
@@ -211,9 +212,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
         middleName: _middleCtrl.text.trim().isEmpty
             ? null
             : _middleCtrl.text.trim(),
-        phonePrimary:
-            _phoneCtrl.text.trim() == '+998' ||
-                _phoneCtrl.text.trim() == '+998 '
+        phonePrimary: _phoneCtrl.text.trim() == '+998'
             ? null
             : _phoneCtrl.text.trim(),
         role: 'Oila boshlig\'i',
@@ -273,7 +272,7 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
     _firstCtrl.clear();
     _lastCtrl.clear();
     _middleCtrl.clear();
-    _phoneCtrl.text = '+998 ';
+    _phoneCtrl.text = '+998';
   }
 
   void _snack(String msg, {bool success = false}) {
@@ -477,6 +476,11 @@ class _LiteAddFamilyPageState extends State<LiteAddFamilyPage> {
                     icon: Icons.phone_android_rounded,
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
+                    maxLength: 13,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                      LengthLimitingTextInputFormatter(13),
+                    ],
                   ),
                 ],
               ),

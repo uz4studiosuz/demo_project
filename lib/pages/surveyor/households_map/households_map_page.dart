@@ -11,7 +11,7 @@ import '../../../models/household_model.dart';
 import '../../../providers/app_provider.dart';
 import '../../../theme/colors.dart';
 import 'households_map_view_model.dart';
-import 'dart:io' show Directory;
+import 'dart:io' if (dart.library.html) '../../../utils/io_stub.dart' show Directory;
 
 // Widgets
 import 'widgets/map_layer_builder.dart';
@@ -60,11 +60,15 @@ class _HouseholdsMapViewState extends State<_HouseholdsMapView> {
   @override
   void initState() {
     super.initState();
-    
-    // Ma'lumotlarni yuklashni ta'minlaymiz
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
-    });
+    // Ma'lumotlarni yuklash — faqat focus household bo'lsa qayta yuklash kerak,
+    // aks holda ota widget (LiteDashboard/SurveyorDashboard) allaqachon chaqirgan.
+    if (widget.focusHousehold != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Provider.of<AppProvider>(context, listen: false).fetchHouseholds();
+        }
+      });
+    }
   }
 
   Widget _buildLoadingState() {

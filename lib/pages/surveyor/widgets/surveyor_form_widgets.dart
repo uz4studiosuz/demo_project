@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../theme/colors.dart';
 
 class SurveyorFormWidgets {
@@ -62,6 +63,8 @@ class SurveyorFormWidgets {
     void Function(String)? onChanged,
     bool readOnly = false,
     bool required = false,
+    List<TextInputFormatter>? inputFormatters,
+    int? maxLength,
   }) {
     final ctrl = controller ?? TextEditingController();
     return ValueListenableBuilder(
@@ -72,7 +75,8 @@ class SurveyorFormWidgets {
           keyboardType: keyboardType,
           onChanged: onChanged,
           readOnly: readOnly,
-          maxLength: keyboardType == TextInputType.phone ? 13 : null,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength ?? (keyboardType == TextInputType.phone ? 13 : null),
           buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
           style: TextStyle(
             fontSize: 14,
@@ -116,9 +120,10 @@ class SurveyorFormWidgets {
     IconData? icon,
     TextInputType keyboard = TextInputType.text,
     List<String> suggestions = const [],
+    List<TextInputFormatter>? inputFormatters,
   }) {
     if (suggestions.isEmpty) {
-      return _buildTextFormField(ctrl, label, required, icon, keyboard);
+      return _buildTextFormField(ctrl, label, required, icon, keyboard, inputFormatters: inputFormatters);
     }
 
     return LayoutBuilder(
@@ -130,6 +135,7 @@ class SurveyorFormWidgets {
         keyboard: keyboard,
         suggestions: suggestions,
         constraints: constraints,
+        inputFormatters: inputFormatters,
       ),
     );
   }
@@ -142,6 +148,8 @@ class SurveyorFormWidgets {
     TextInputType keyboard, {
     FocusNode? focusNode,
     void Function(String)? onFieldSubmitted,
+    List<TextInputFormatter>? inputFormatters,
+    int? maxLength,
   }) {
     return ValueListenableBuilder(
       valueListenable: ctrl,
@@ -151,7 +159,8 @@ class SurveyorFormWidgets {
           focusNode: focusNode,
           keyboardType: keyboard,
           onFieldSubmitted: onFieldSubmitted,
-          maxLength: keyboard == TextInputType.phone ? 13 : null,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength ?? (keyboard == TextInputType.phone ? 13 : null),
           buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
           style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
@@ -280,6 +289,7 @@ class _SuggestionField extends StatefulWidget {
   final TextInputType keyboard;
   final List<String> suggestions;
   final BoxConstraints constraints;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _SuggestionField({
     required this.ctrl,
@@ -289,6 +299,7 @@ class _SuggestionField extends StatefulWidget {
     required this.keyboard,
     required this.suggestions,
     required this.constraints,
+    this.inputFormatters,
   });
 
   @override
@@ -296,13 +307,19 @@ class _SuggestionField extends StatefulWidget {
 }
 
 class _SuggestionFieldState extends State<_SuggestionField> {
-  final LayerLink _layerLink = LayerLink();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return RawAutocomplete<String>(
       textEditingController: widget.ctrl,
-      focusNode: FocusNode(),
+      focusNode: _focusNode,
       optionsBuilder: (TextEditingValue textEditingValue) {
         if (textEditingValue.text.isEmpty) {
           return const Iterable<String>.empty();
@@ -317,47 +334,46 @@ class _SuggestionFieldState extends State<_SuggestionField> {
         return matches;
       },
       optionsViewBuilder: (context, onSelected, options) {
-        return CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          followerAnchor: Alignment.bottomLeft,
-          targetAnchor: Alignment.topLeft,
-          offset: const Offset(0, -8),
-          child: Align(
-            alignment: Alignment.bottomLeft,
-            child: Material(
-              elevation: 8.0,
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+        // CompositedTransformFollower ishlatilmaydi — u hit-test maydonini
+        // vizual pozitsiyadan ajratib qo'yar edi (tanlash imkonsiz bo'lardi).
+        // RawAutocomplete ning standart overlay pozitsiyalashi ishlatiladi.
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 8.0,
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: 200,
+                  maxWidth: widget.constraints.maxWidth,
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                    maxWidth: widget.constraints.maxWidth,
-                  ),
-                  child: ListView.separated(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    itemCount: options.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF5F6F8)),
-                    itemBuilder: (BuildContext context, int index) {
-                      final String option = options.elementAt(index);
-                      return InkWell(
-                        onTap: () {
-                          onSelected(option);
-                          FocusScope.of(context).unfocus();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-                          child: Text(option, style: const TextStyle(fontSize: 14)),
-                        ),
-                      );
-                    },
-                  ),
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: Color(0xFFF5F6F8)),
+                  itemBuilder: (BuildContext context, int index) {
+                    final String option = options.elementAt(index);
+                    return InkWell(
+                      onTap: () {
+                        onSelected(option);
+                        FocusScope.of(context).unfocus();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0, vertical: 12.0),
+                        child:
+                            Text(option, style: const TextStyle(fontSize: 14)),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -365,17 +381,15 @@ class _SuggestionFieldState extends State<_SuggestionField> {
         );
       },
       fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-        return CompositedTransformTarget(
-          link: _layerLink,
-          child: SurveyorFormWidgets._buildTextFormField(
-            textEditingController,
-            widget.label,
-            widget.required,
-            widget.icon,
-            widget.keyboard,
-            focusNode: focusNode,
-            onFieldSubmitted: (v) => onFieldSubmitted(),
-          ),
+        return SurveyorFormWidgets._buildTextFormField(
+          textEditingController,
+          widget.label,
+          widget.required,
+          widget.icon,
+          widget.keyboard,
+          focusNode: focusNode,
+          onFieldSubmitted: (v) => onFieldSubmitted(),
+          inputFormatters: widget.inputFormatters,
         );
       },
     );
