@@ -14,6 +14,29 @@ import 'map_cluster_badge.dart';
 import '../../widgets/surveyor_household_actions.dart';
 import '../../widgets/building_bottom_sheet.dart';
 
+// Ko'chalarga qarab rang ajratish uchun yordamchi funksiya
+Color _getStreetColor(String? streetName) {
+  if (streetName == null || streetName.isEmpty) return AppColors.govNavy;
+
+  final int hash = streetName.trim().toLowerCase().hashCode;
+  final List<Color> palette = [
+    Colors.red.shade600,
+    Colors.green.shade600,
+    Colors.orange.shade700,
+    Colors.purple.shade600,
+    Colors.teal.shade600,
+    Colors.pink.shade600,
+    Colors.indigo.shade600,
+    Colors.amber.shade800,
+    Colors.cyan.shade700,
+    Colors.deepOrange.shade600,
+    Colors.blue.shade700,
+    Colors.brown.shade500,
+  ];
+
+  return palette[hash.abs() % palette.length];
+}
+
 List<Marker> buildMapMarkers({
   required BuildContext context,
   required HouseholdsMapViewModel viewModel,
@@ -64,6 +87,7 @@ List<Marker> buildMapMarkers({
   if (currentZoom >= 12.5 && currentZoom < 15) {
     return viewModel.byStreet(households).entries.map((e) {
       final c = viewModel.getCenter(e.value);
+      final streetColor = _getStreetColor(e.key);
       return Marker(
         point: c,
         width: 180,
@@ -73,7 +97,7 @@ List<Marker> buildMapMarkers({
           child: MapClusterBadge(
             title: e.key,
             count: e.value.length,
-            color: Colors.teal.shade700,
+            color: streetColor,
           ),
         ),
       );
@@ -165,7 +189,7 @@ List<Marker> buildMapMarkers({
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isFocused ? Colors.red : Colors.blue.shade700,
+              color: isFocused ? Colors.red : _getStreetColor(h.streetName),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: [
@@ -226,25 +250,36 @@ List<Marker> buildMapMarkers({
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isFocused ? Colors.purple : Colors.red.shade700,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              color: isFocused ? Colors.purple : _getStreetColor(first.streetName),
+              borderRadius: BorderRadius.circular(10), // Rounded square for apartments
+              border: Border.all(color: Colors.white, width: 2.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             alignment: Alignment.center,
-            child: Text(
-              buildingNum,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.apartment_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+                Text(
+                  buildingNum,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
